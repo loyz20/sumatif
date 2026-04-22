@@ -3,10 +3,11 @@ const { z } = require('zod');
 const createPtkSchema = z.object({
   nama: z.string().min(1, 'Nama wajib diisi'),
   nik: z.string().length(16, 'NIK harus 16 digit'),
-  nip: z.string().optional(),
-  nuptk: z.string().optional(),
+  nip: z.string().min(1, 'NIP wajib diisi'),
+  nuptk: z.string().min(1, 'NUPTK wajib diisi'),
   jenis_kelamin: z.enum(['L', 'P']),
-  tanggal_lahir: z.string(),
+  tanggal_lahir: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal lahir tidak valid'),
+  pendidikan_terakhir: z.string().min(1, 'Pendidikan terakhir wajib diisi'),
   sekolah_id: z.string().uuid('Sekolah tidak valid'),
 });
 
