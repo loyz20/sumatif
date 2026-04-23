@@ -21,8 +21,15 @@ const listPtkQuerySchema = z.object({
   sekolah_id: z.string().uuid('Sekolah tidak valid').optional(),
 });
 
+const createPtkRiwayatPendidikanSchema = z.object({
+  jenjang: z.string().min(1, 'Jenjang wajib diisi'),
+  nama_instansi: z.string().min(1, 'Nama instansi wajib diisi'),
+  tahun_lulus: z.number().int().min(1900).max(3000),
+});
+
 module.exports = {
   createPtkSchema,
   updatePtkSchema,
   listPtkQuerySchema,
+  createPtkRiwayatPendidikanSchema,
 };

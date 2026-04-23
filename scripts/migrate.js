@@ -19,6 +19,7 @@ const migrationOrder = [
   '20260422_create_auth_refresh_tokens.sql',
   '20260422_fix_existing_system_admin_credentials.sql',
   '20260422_alter_ptk_add_unique_indexes.sql',
+  '20260422_create_absensi_tracking_ptk_riwayat.sql',
 ];
 
 function getConnectionConfig() {
@@ -107,19 +108,13 @@ async function runUp() {
         continue;
       }
 
-      await connection.query('START TRANSACTION');
-      try {
-        await connection.query(up);
-        await connection.query(
-          'INSERT INTO schema_migrations (migration_name) VALUES (?)',
-          [fileName]
-        );
-        await connection.query('COMMIT');
-        console.log(`Applied ${fileName}`);
-      } catch (error) {
-        await connection.query('ROLLBACK');
-        throw error;
-      }
+      console.log(`Applying ${fileName}`);
+      await connection.query(up);
+      await connection.query(
+        'INSERT INTO schema_migrations (migration_name) VALUES (?)',
+        [fileName]
+      );
+      console.log(`Applied ${fileName}`);
     }
   } finally {
     await connection.end();
@@ -152,16 +147,10 @@ async function runDown() {
       throw new Error(`Migration ${fileName} does not define a -- Down section.`);
     }
 
-    await connection.query('START TRANSACTION');
-    try {
-      await connection.query(down);
-      await connection.query('DELETE FROM schema_migrations WHERE migration_name = ?', [fileName]);
-      await connection.query('COMMIT');
-      console.log(`Reverted ${fileName}`);
-    } catch (error) {
-      await connection.query('ROLLBACK');
-      throw error;
-    }
+    console.log(`Reverting ${fileName}`);
+    await connection.query(down);
+    await connection.query('DELETE FROM schema_migrations WHERE migration_name = ?', [fileName]);
+    console.log(`Reverted ${fileName}`);
   } finally {
     await connection.end();
   }
@@ -177,6 +166,12 @@ async function main() {
     await runUp();
   } catch (error) {
     console.error('Migration failed:');
+    if (error.code) {
+      console.error(`Code: ${error.code}`);
+    }
+    if (error.sqlMessage) {
+      console.error(`SQL: ${error.sqlMessage}`);
+    }
     console.error(error.message);
     process.exitCode = 1;
   }

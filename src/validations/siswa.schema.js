@@ -13,7 +13,16 @@ const createSiswaSchema = z.object({
 
 const updateSiswaSchema = createSiswaSchema.partial();
 
+const listSiswaQuerySchema = z.object({
+  page: z.string().optional(),
+  limit: z.string().optional(),
+  search: z.string().optional(),
+  sort: z.string().optional(),
+  sekolah_id: z.string().uuid('Sekolah tidak valid').optional(),
+});
+
 module.exports = {
   createSiswaSchema,
   updateSiswaSchema,
+  listSiswaQuerySchema,
 };

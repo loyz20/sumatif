@@ -1,5 +1,5 @@
 const express = require('express');
-const sekolahController = require('../../controllers/sekolah.controller');
+const { controller: sekolahController } = require('../../modules/sekolah');
 const { validateRequest } = require('../../middlewares/validation.middleware');
 const { idParamsSchema, paginationSchema } = require('../../validations/base.schema');
 const { createSekolahSchema, updateSekolahSchema } = require('../../validations/sekolah.schema');
