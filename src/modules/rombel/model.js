@@ -5,6 +5,11 @@ async function listRombel({ search, page, limit, sortField, sortDirection, tahun
   const filters = [];
   const values = [];
 
+  if (sekolahId) {
+    filters.push('r.sekolah_id = ?');
+    values.push(sekolahId);
+  }
+
   if (tahunAjaranId) {
     filters.push('r.tahun_ajaran_id = ?');
     values.push(tahunAjaranId);
@@ -53,13 +58,20 @@ async function listRombel({ search, page, limit, sortField, sortDirection, tahun
   };
 }
 
-async function findRombelById(id) {
+async function findRombelById(id, sekolahId) {
+  const values = [id];
+  let filter = '';
+  if (sekolahId) {
+    filter = ' AND sekolah_id = ?';
+    values.push(sekolahId);
+  }
+
   const [rows] = await pool.query(
     `SELECT id, sekolah_id, tahun_ajaran_id, nama, tingkat, wali_kelas_ptk_id
      FROM rombel
-     WHERE id = ?
+     WHERE id = ?${filter}
      LIMIT 1`,
-    [id]
+    values
   );
 
   return rows[0] || null;

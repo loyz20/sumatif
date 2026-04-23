@@ -121,13 +121,20 @@ async function createPtk(data) {
 	return findPtkById(id);
 }
 
+const PTK_UPDATABLE_FIELDS = new Set([
+	'sekolah_id', 'nama', 'nik', 'nip', 'nuptk',
+	'jenis_kelamin', 'tanggal_lahir', 'pendidikan_terakhir',
+]);
+
 async function updatePtk(id, data) {
 	const fields = [];
 	const values = [];
 
 	for (const [key, value] of Object.entries(data)) {
-		fields.push(`${key} = ?`);
-		values.push(value);
+		if (PTK_UPDATABLE_FIELDS.has(key)) {
+			fields.push(`${key} = ?`);
+			values.push(value);
+		}
 	}
 
 	if (fields.length === 0) {

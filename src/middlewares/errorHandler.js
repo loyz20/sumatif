@@ -34,6 +34,11 @@ function errorHandler(error, req, res, next) {
   const message = statusCode === 500 ? 'Terjadi kesalahan pada server' : (error.message || 'Terjadi kesalahan');
   const errors = error.errors ?? null;
 
+  // Log server errors for debugging visibility
+  if (statusCode >= 500) {
+    console.error(`[ERROR] ${req.method} ${req.originalUrl}`, error);
+  }
+
   return errorResponse(res, message, errors, statusCode, code);
 }
 

@@ -1,0 +1,11 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sumatif API",
+    "version": "1.0.0",
+    "description": "API documentation for Sumatif backend"
+  },
+  "paths": {},
+  "components": {},
+  "tags": []
+}

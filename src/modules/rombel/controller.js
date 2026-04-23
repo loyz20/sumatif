@@ -12,7 +12,7 @@ async function list(req, res, next) {
 
 async function detail(req, res, next) {
   try {
-    const result = await rombelService.detail(req.params.id);
+    const result = await rombelService.detail(req.params.id, req.query);
     return successResponse(res, result);
   } catch (error) {
     return next(error);
@@ -39,7 +39,7 @@ async function addAnggota(req, res, next) {
 
 async function listAnggota(req, res, next) {
   try {
-    const result = await rombelService.listAnggota(req.params.id);
+    const result = await rombelService.listAnggota(req.params.id, req.query);
     return successResponse(res, result);
   } catch (error) {
     return next(error);
@@ -48,7 +48,7 @@ async function listAnggota(req, res, next) {
 
 async function listPembelajaran(req, res, next) {
   try {
-    const result = await rombelService.listPembelajaran(req.params.id);
+    const result = await rombelService.listPembelajaran(req.params.id, req.query);
     return successResponse(res, result);
   } catch (error) {
     return next(error);

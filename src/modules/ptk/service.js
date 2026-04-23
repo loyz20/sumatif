@@ -1,34 +1,16 @@
 const ErrorCode = require('../../constants/errorCodes');
 const ptkModel = require('./model');
-const { createError } = require('../shared/service');
+const { createError, parsePagination } = require('../shared/service');
 
-function parsePagination(query) {
-  const page = Math.max(Number.parseInt(query.page || '1', 10) || 1, 1);
-  const limit = Math.min(Math.max(Number.parseInt(query.limit || '10', 10) || 10, 1), 100);
-  const search = query.search ? String(query.search).trim() : '';
-  const sekolahId = query.sekolah_id ? String(query.sekolah_id).trim() : '';
-  const sort = query.sort ? String(query.sort).trim() : 'nama:asc';
-
-  const [sortFieldRaw, sortDirectionRaw] = sort.split(':');
-  const allowedSortFields = new Set([
-    'nama',
-    'nik',
-    'nip',
-    'nuptk',
-    'jenis_kelamin',
-    'tanggal_lahir',
-    'pendidikan_terakhir',
-    'created_at',
-  ]);
-  const sortField = allowedSortFields.has(sortFieldRaw) ? sortFieldRaw : 'nama';
-  const sortDirection = String(sortDirectionRaw || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-
-  return { page, limit, search, sekolahId, sortField, sortDirection };
-}
+const PTK_SORT_FIELDS = new Set([
+  'nama', 'nik', 'nip', 'nuptk',
+  'jenis_kelamin', 'tanggal_lahir', 'pendidikan_terakhir', 'created_at',
+]);
 
 async function list(query) {
-  const pagination = parsePagination(query);
-  return ptkModel.listPtk(pagination);
+  const pagination = parsePagination(query, 'nama', PTK_SORT_FIELDS);
+  const sekolahId = query.sekolah_id ? String(query.sekolah_id).trim() : '';
+  return ptkModel.listPtk({ ...pagination, sekolahId });
 }
 
 async function detail(id) {

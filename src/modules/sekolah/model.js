@@ -87,13 +87,20 @@ async function createSekolah(data) {
 	return findSekolahById(id);
 }
 
+const SEKOLAH_UPDATABLE_FIELDS = new Set([
+	'nama', 'npsn', 'status', 'alamat', 'provinsi', 'kabupaten',
+	'kecamatan', 'desa', 'kode_pos', 'lintang', 'bujur',
+]);
+
 async function updateSekolah(id, data) {
 	const fields = [];
 	const values = [];
 
 	for (const [key, value] of Object.entries(data)) {
-		fields.push(`${key} = ?`);
-		values.push(value);
+		if (SEKOLAH_UPDATABLE_FIELDS.has(key)) {
+			fields.push(`${key} = ?`);
+			values.push(value);
+		}
 	}
 
 	if (fields.length === 0) {

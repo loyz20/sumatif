@@ -72,6 +72,34 @@ async function revokeAllRefreshTokensByUserId(userId) {
   );
 }
 
+async function rotateRefreshToken(oldToken, { userId, token, expiresAt }) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    await connection.query(
+      `UPDATE auth_refresh_tokens
+       SET revoked_at = NOW()
+       WHERE token = ? AND revoked_at IS NULL`,
+      [oldToken]
+    );
+
+    const id = crypto.randomUUID();
+    await connection.query(
+      `INSERT INTO auth_refresh_tokens (id, user_id, token, expires_at)
+       VALUES (?, ?, ?, ?)`,
+      [id, userId, token, expiresAt]
+    );
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 module.exports = {
   findUserByUsername,
   findUserById,
@@ -79,4 +107,5 @@ module.exports = {
   findRefreshToken,
   revokeRefreshToken,
   revokeAllRefreshTokensByUserId,
+  rotateRefreshToken,
 };

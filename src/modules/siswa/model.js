@@ -6,26 +6,28 @@ async function listSiswa({ search, page, limit, sortField, sortDirection, sekola
   const values = [];
 
   if (sekolahId) {
-    filters.push('sekolah_id = ?');
+    filters.push('p.sekolah_id = ?');
     values.push(sekolahId);
   }
 
   if (search) {
-    filters.push('(nama LIKE ? OR nisn LIKE ? OR nik LIKE ?)');
+    filters.push('(p.nama LIKE ? OR p.nis LIKE ? OR p.nisn LIKE ? OR p.nik LIKE ?)');
     const keyword = `%${search}%`;
-    values.push(keyword, keyword, keyword);
+    values.push(keyword, keyword, keyword, keyword);
   }
 
   const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-  const [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM peserta_didik ${whereClause}`, values);
+  const [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM peserta_didik p ${whereClause}`, values);
   const total = Number(countRows[0]?.total || 0);
   const offset = (page - 1) * limit;
 
   const [rows] = await pool.query(
-    `SELECT id, sekolah_id, nama, nisn, nik, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu
-     FROM peserta_didik
+    `SELECT p.id, p.sekolah_id, p.nama, p.nis, p.nisn, p.nik, p.jenis_kelamin, p.tanggal_lahir, p.nama_ayah, p.nama_ibu, r.tingkat, r.nama as kelas, ar.rombel_id
+     FROM peserta_didik p
+     LEFT JOIN anggota_rombel ar ON p.id = ar.peserta_didik_id
+     LEFT JOIN rombel r ON ar.rombel_id = r.id
      ${whereClause}
-     ORDER BY ${sortField} ${sortDirection}
+     ORDER BY p.${sortField} ${sortDirection}
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
@@ -41,13 +43,22 @@ async function listSiswa({ search, page, limit, sortField, sortDirection, sekola
   };
 }
 
-async function findSiswaById(id) {
+async function findSiswaById(id, sekolahId) {
+  const values = [id];
+  let filter = '';
+  
+  if (sekolahId) {
+    filter = ' AND p.sekolah_id = ?';
+    values.push(sekolahId);
+  }
+
   const [rows] = await pool.query(
-    `SELECT id, sekolah_id, nama, nisn, nik, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu
-     FROM peserta_didik
-     WHERE id = ?
+    `SELECT p.id, p.sekolah_id, p.nama, p.nis, p.nisn, p.nik, p.jenis_kelamin, p.tanggal_lahir, p.nama_ayah, p.nama_ibu, ar.rombel_id
+     FROM peserta_didik p
+     LEFT JOIN anggota_rombel ar ON p.id = ar.peserta_didik_id
+     WHERE p.id = ?${filter}
      LIMIT 1`,
-    [id]
+    values
   );
 
   return rows[0] || null;
@@ -83,47 +94,99 @@ async function findSiswaConflicts({ nisn, nik }, exceptId) {
 
 async function createSiswa(data) {
   const id = crypto.randomUUID();
+  const connection = await pool.getConnection();
 
-  await pool.query(
-    `INSERT INTO peserta_didik (
-      id, sekolah_id, nama, nisn, nik, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      data.sekolah_id,
-      data.nama,
-      data.nisn,
-      data.nik,
-      data.jenis_kelamin,
-      data.tanggal_lahir,
-      data.nama_ayah || '-',
-      data.nama_ibu || '-',
-    ]
-  );
+  try {
+    await connection.beginTransaction();
+    await connection.query(
+      `INSERT INTO peserta_didik (
+        id, sekolah_id, nama, nis, nisn, nik, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        data.sekolah_id || null,
+        data.nama,
+        data.nis,
+        data.nisn || null,
+        data.nik || null,
+        data.jenis_kelamin || null,
+        data.tanggal_lahir || null,
+        data.nama_ayah || null,
+        data.nama_ibu || null,
+      ]
+    );
+
+    if (data.rombel_id) {
+      await connection.query(
+        `INSERT INTO anggota_rombel (id, rombel_id, peserta_didik_id) VALUES (?, ?, ?)`,
+        [crypto.randomUUID(), data.rombel_id, id]
+      );
+    }
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 
   return findSiswaById(id);
 }
+
+const SISWA_UPDATABLE_FIELDS = new Set([
+  'sekolah_id', 'nama', 'nis', 'nisn', 'nik', 'jenis_kelamin',
+  'tanggal_lahir', 'nama_ayah', 'nama_ibu',
+]);
 
 async function updateSiswa(id, data) {
   const fields = [];
   const values = [];
 
   for (const [key, value] of Object.entries(data)) {
-    fields.push(`${key} = ?`);
-    values.push(value);
+    if (SISWA_UPDATABLE_FIELDS.has(key)) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
   }
 
-  if (!fields.length) {
-    return findSiswaById(id);
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    if (fields.length > 0) {
+      values.push(id);
+      await connection.query(`UPDATE peserta_didik SET ${fields.join(', ')} WHERE id = ?`, values);
+    }
+
+    if (data.rombel_id !== undefined) {
+      await connection.query(`DELETE FROM anggota_rombel WHERE peserta_didik_id = ?`, [id]);
+      if (data.rombel_id) {
+        await connection.query(
+          `INSERT INTO anggota_rombel (id, rombel_id, peserta_didik_id) VALUES (?, ?, ?)`,
+          [crypto.randomUUID(), data.rombel_id, id]
+        );
+      }
+    }
+    
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
   }
 
-  values.push(id);
-  await pool.query(`UPDATE peserta_didik SET ${fields.join(', ')} WHERE id = ?`, values);
   return findSiswaById(id);
 }
 
-async function deleteSiswa(id) {
-  const [result] = await pool.query('DELETE FROM peserta_didik WHERE id = ?', [id]);
+async function deleteSiswa(id, sekolahId) {
+  const values = [id];
+  let filter = '';
+  if (sekolahId) {
+    filter = ' AND sekolah_id = ?';
+    values.push(sekolahId);
+  }
+  const [result] = await pool.query(`DELETE FROM peserta_didik WHERE id = ?${filter}`, values);
   return result.affectedRows > 0;
 }
 

@@ -1,32 +1,14 @@
 const ErrorCode = require('../../constants/errorCodes');
 const sekolahModel = require('./model');
-const { createError } = require('../shared/service');
+const { createError, parsePagination } = require('../shared/service');
 
-function parsePagination(query) {
-  const page = Math.max(Number.parseInt(query.page || '1', 10) || 1, 1);
-  const limit = Math.min(Math.max(Number.parseInt(query.limit || '10', 10) || 10, 1), 100);
-  const search = query.search ? String(query.search).trim() : '';
-  const sort = query.sort ? String(query.sort).trim() : 'created_at:desc';
-
-  const [sortFieldRaw, sortDirectionRaw] = sort.split(':');
-  const allowedSortFields = new Set([
-    'created_at',
-    'nama',
-    'npsn',
-    'status',
-    'provinsi',
-    'kabupaten',
-    'kecamatan',
-    'desa',
-  ]);
-  const sortField = allowedSortFields.has(sortFieldRaw) ? sortFieldRaw : 'created_at';
-  const sortDirection = String(sortDirectionRaw || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-
-  return { page, limit, search, sortField, sortDirection };
-}
+const SEKOLAH_SORT_FIELDS = new Set([
+  'created_at', 'nama', 'npsn', 'status',
+  'provinsi', 'kabupaten', 'kecamatan', 'desa',
+]);
 
 async function list(query) {
-  const pagination = parsePagination(query);
+  const pagination = parsePagination(query, 'created_at', SEKOLAH_SORT_FIELDS);
   return sekolahModel.listSekolah(pagination);
 }
 

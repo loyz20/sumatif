@@ -2,6 +2,8 @@ const express = require('express');
 const { testConnection } = require('../../config/db');
 const { successResponse } = require('../../utils/response');
 const ErrorCode = require('../../constants/errorCodes');
+const { authenticate } = require('../../middlewares/auth.middleware');
+const { tenantMiddleware } = require('../../middlewares/tenant.middleware');
 const authRoutes = require('./auth.routes');
 const sekolahRoutes = require('./sekolah.routes');
 const ptkRoutes = require('./ptk.routes');
@@ -15,22 +17,12 @@ const semesterRoutes = require('./semester.routes');
 const absensiRoutes = require('./absensi.routes');
 const trackingRoutes = require('./tracking.routes');
 const userRoutes = require('./user.routes');
+const dashboardRoutes = require('./dashboard.routes');
 
 const router = express.Router();
 
+// Public routes (no authentication required)
 router.use('/auth', authRoutes);
-router.use('/sekolah', sekolahRoutes);
-router.use('/ptk', ptkRoutes);
-router.use('/siswa', siswaRoutes);
-router.use('/registrasi', registrasiRoutes);
-router.use('/rombel', rombelRoutes);
-router.use('/mata-pelajaran', mataPelajaranRoutes);
-router.use('/pembelajaran', pembelajaranRoutes);
-router.use('/tahun-ajaran', tahunAjaranRoutes);
-router.use('/semester', semesterRoutes);
-router.use('/absensi', absensiRoutes);
-router.use('/tracking', trackingRoutes);
-router.use('/user', userRoutes);
 
 router.get('/', (req, res) => {
   return successResponse(res, { service: 'Express API is running' });
@@ -51,4 +43,20 @@ router.get('/db-health', async (req, res, next) => {
   }
 });
 
+// Protected routes (authentication required)
+router.use('/sekolah', authenticate, tenantMiddleware, sekolahRoutes);
+router.use('/ptk', authenticate, tenantMiddleware, ptkRoutes);
+router.use('/siswa', authenticate, tenantMiddleware, siswaRoutes);
+router.use('/registrasi', authenticate, tenantMiddleware, registrasiRoutes);
+router.use('/rombel', authenticate, tenantMiddleware, rombelRoutes);
+router.use('/mata-pelajaran', authenticate, tenantMiddleware, mataPelajaranRoutes);
+router.use('/pembelajaran', authenticate, tenantMiddleware, pembelajaranRoutes);
+router.use('/tahun-ajaran', authenticate, tenantMiddleware, tahunAjaranRoutes);
+router.use('/semester', authenticate, tenantMiddleware, semesterRoutes);
+router.use('/absensi', authenticate, tenantMiddleware, absensiRoutes);
+router.use('/tracking', authenticate, tenantMiddleware, trackingRoutes);
+router.use('/user', authenticate, tenantMiddleware, userRoutes);
+router.use('/dashboard', authenticate, tenantMiddleware, dashboardRoutes);
+
 module.exports = router;
+

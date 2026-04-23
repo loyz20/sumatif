@@ -45,6 +45,7 @@ async function login(username, password) {
     refresh_token: refreshToken,
     user: {
       id: user.id,
+      username: user.username,
       role: user.role,
     },
   };
@@ -73,8 +74,8 @@ async function refresh(refreshToken) {
   const newRefreshToken = signRefreshToken(user);
   const refreshExpiresAt = getRefreshExpiresAt(newRefreshToken);
 
-  await authModel.revokeRefreshToken(refreshToken);
-  await authModel.createRefreshToken({
+  // Use a transaction to ensure atomic token rotation
+  await authModel.rotateRefreshToken(refreshToken, {
     userId: user.id,
     token: newRefreshToken,
     expiresAt: refreshExpiresAt,
@@ -85,6 +86,7 @@ async function refresh(refreshToken) {
     refresh_token: newRefreshToken,
     user: {
       id: user.id,
+      username: user.username,
       role: user.role,
     },
   };
