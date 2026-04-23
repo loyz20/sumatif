@@ -24,8 +24,26 @@ async function create(data) {
   }
 }
 
+async function update(id, data) {
+  const sekolahId = data.sekolah_id;
+  if (!sekolahId) throw createError('Sekolah ID is required', 400);
+  const success = await tahunAjaranModel.updateTahunAjaran(id, data, sekolahId);
+  if (!success) throw createError('Tahun ajaran tidak ditemukan atau akses ditolak', 404);
+  return { id, ...data };
+}
+
+async function remove(id, query) {
+  const sekolahId = query.sekolah_id;
+  if (!sekolahId) throw createError('Sekolah ID is required', 400);
+  const success = await tahunAjaranModel.deleteTahunAjaran(id, sekolahId);
+  if (!success) throw createError('Tahun ajaran tidak ditemukan atau akses ditolak', 404);
+  return { id, deleted: true };
+}
+
 module.exports = {
   list,
   create,
+  update,
+  remove,
 };
 

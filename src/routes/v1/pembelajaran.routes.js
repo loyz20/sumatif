@@ -6,6 +6,9 @@ const { createPembelajaranSchema } = require('../../validations/pembelajaran.sch
 
 const router = express.Router();
 
+router.get('/rombel/:rombelId', authorize('admin', 'guru'), pembelajaranController.listByRombel);
 router.post('/', authorize('admin'), validateRequest(createPembelajaranSchema), pembelajaranController.create);
+router.put('/:id', authorize('admin'), validateRequest(createPembelajaranSchema), pembelajaranController.update);
+router.delete('/:id', authorize('admin'), pembelajaranController.remove);
 
 module.exports = router;

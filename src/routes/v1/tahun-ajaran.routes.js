@@ -8,5 +8,7 @@ const router = express.Router();
 
 router.get('/', authorize('admin', 'guru'), validateRequest(listTahunAjaranQuerySchema, 'query'), tahunAjaranController.list);
 router.post('/', authorize('admin'), validateRequest(createTahunAjaranSchema), tahunAjaranController.create);
+router.put('/:id', authorize('admin'), validateRequest(createTahunAjaranSchema), tahunAjaranController.update);
+router.delete('/:id', authorize('admin'), tahunAjaranController.remove);
 
 module.exports = router;

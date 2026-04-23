@@ -13,7 +13,7 @@ async function list(req, res, next) {
 
 async function detail(req, res, next) {
   try {
-    const result = await ptkService.detail(req.params.id);
+    const result = await ptkService.detail(req.params.id, req.query);
     return successResponse(res, result);
   } catch (error) {
     return next(error);
@@ -54,7 +54,7 @@ async function update(req, res, next) {
 
 async function remove(req, res, next) {
   try {
-    await ptkService.remove(req.params.id);
+    await ptkService.remove(req.params.id, req.query);
     await logActivity({
       userId: req.user.id,
       action: 'DELETE_PTK',

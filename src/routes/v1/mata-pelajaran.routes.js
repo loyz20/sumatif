@@ -8,5 +8,7 @@ const router = express.Router();
 
 router.get('/', authorize('admin', 'guru'), validateRequest(listMataPelajaranQuerySchema, 'query'), mataPelajaranController.list);
 router.post('/', authorize('admin'), validateRequest(createMataPelajaranSchema), mataPelajaranController.create);
+router.put('/:id', authorize('admin'), validateRequest(createMataPelajaranSchema), mataPelajaranController.update);
+router.delete('/:id', authorize('admin'), mataPelajaranController.remove);
 
 module.exports = router;

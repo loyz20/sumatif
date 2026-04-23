@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { pool } = require('../../config/db');
 
 async function listSemester({ search, page, limit, sortField, sortDirection, tahunAjaranId }) {
@@ -48,6 +49,44 @@ async function listSemester({ search, page, limit, sortField, sortDirection, tah
   };
 }
 
+async function createSemester(data) {
+  const id = crypto.randomUUID();
+  await pool.query('INSERT INTO semester (id, tahun_ajaran_id, nama, aktif) VALUES (?, ?, ?, ?)', [
+    id,
+    data.tahun_ajaran_id,
+    data.nama,
+    Boolean(data.aktif),
+  ]);
+
+  const [rows] = await pool.query('SELECT id, tahun_ajaran_id, nama, aktif FROM semester WHERE id = ? LIMIT 1', [id]);
+  return rows[0] || null;
+}
+
+async function updateSemester(id, data, sekolahId) {
+  // Verify that the semester belongs to a tahun_ajaran of this school
+  const [result] = await pool.query(
+    `UPDATE semester s
+     JOIN tahun_ajaran ta ON ta.id = s.tahun_ajaran_id
+     SET s.nama = ?, s.aktif = ?
+     WHERE s.id = ? AND ta.sekolah_id = ?`,
+    [data.nama, Boolean(data.aktif), id, sekolahId]
+  );
+  return result.affectedRows > 0;
+}
+
+async function deleteSemester(id, sekolahId) {
+  const [result] = await pool.query(
+    `DELETE s FROM semester s
+     JOIN tahun_ajaran ta ON ta.id = s.tahun_ajaran_id
+     WHERE s.id = ? AND ta.sekolah_id = ?`,
+    [id, sekolahId]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   listSemester,
+  createSemester,
+  updateSemester,
+  deleteSemester,
 };

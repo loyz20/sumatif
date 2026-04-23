@@ -13,8 +13,9 @@ async function list(query) {
   return ptkModel.listPtk({ ...pagination, sekolahId });
 }
 
-async function detail(id) {
-  const ptk = await ptkModel.findPtkById(id);
+async function detail(id, query) {
+  const sekolahId = query.sekolah_id;
+  const ptk = await ptkModel.findPtkById(id, sekolahId);
 
   if (!ptk) {
     throw createError('Data PTK tidak ditemukan', 404, ErrorCode.NOT_FOUND);
@@ -50,7 +51,8 @@ async function create(data) {
 }
 
 async function update(id, data) {
-  const ptk = await ptkModel.findPtkById(id);
+  const sekolahId = data.sekolah_id;
+  const ptk = await ptkModel.findPtkById(id, sekolahId);
   if (!ptk) {
     throw createError('Data PTK tidak ditemukan', 404, ErrorCode.NOT_FOUND);
   }
@@ -69,7 +71,7 @@ async function update(id, data) {
   }
 
   try {
-    return await ptkModel.updatePtk(id, data);
+    return await ptkModel.updatePtk(id, data, sekolahId);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw createError('Data PTK duplikat', 409, ErrorCode.DUPLICATE_DATA);
@@ -83,8 +85,9 @@ async function update(id, data) {
   }
 }
 
-async function remove(id) {
-  const deleted = await ptkModel.deletePtk(id);
+async function remove(id, query) {
+  const sekolahId = query.sekolah_id;
+  const deleted = await ptkModel.deletePtk(id, sekolahId);
 
   if (!deleted) {
     throw createError('Data PTK tidak ditemukan', 404, ErrorCode.NOT_FOUND);

@@ -53,13 +53,13 @@ async function listPtk({ search, page, limit, sortField, sortDirection, sekolahI
 	};
 }
 
-async function findPtkById(id) {
+async function findPtkById(id, sekolahId) {
 	const [rows] = await pool.query(
 		`SELECT id, sekolah_id, nama, nik, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir
 		 FROM ptk
-		 WHERE id = ?
+		 WHERE id = ? AND (sekolah_id = ? OR ? IS NULL)
 		 LIMIT 1`,
-		[id]
+		[id, sekolahId, sekolahId]
 	);
 
 	return rows[0] || null;
@@ -126,7 +126,7 @@ const PTK_UPDATABLE_FIELDS = new Set([
 	'jenis_kelamin', 'tanggal_lahir', 'pendidikan_terakhir',
 ]);
 
-async function updatePtk(id, data) {
+async function updatePtk(id, data, sekolahId) {
 	const fields = [];
 	const values = [];
 
@@ -138,21 +138,21 @@ async function updatePtk(id, data) {
 	}
 
 	if (fields.length === 0) {
-		return findPtkById(id);
+		return findPtkById(id, sekolahId);
 	}
 
-	values.push(id);
+	values.push(id, sekolahId);
 
 	await pool.query(
-		`UPDATE ptk SET ${fields.join(', ')} WHERE id = ?`,
+		`UPDATE ptk SET ${fields.join(', ')} WHERE id = ? AND sekolah_id = ?`,
 		values
 	);
 
-	return findPtkById(id);
+	return findPtkById(id, sekolahId);
 }
 
-async function deletePtk(id) {
-	const [result] = await pool.query('DELETE FROM ptk WHERE id = ?', [id]);
+async function deletePtk(id, sekolahId) {
+	const [result] = await pool.query('DELETE FROM ptk WHERE id = ? AND sekolah_id = ?', [id, sekolahId]);
 	return result.affectedRows > 0;
 }
 

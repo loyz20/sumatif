@@ -62,7 +62,25 @@ async function createTahunAjaran(data) {
   return rows[0] || null;
 }
 
+async function updateTahunAjaran(id, data, sekolahId) {
+  const [result] = await pool.query(
+    'UPDATE tahun_ajaran SET tahun = ?, aktif = ? WHERE id = ? AND sekolah_id = ?',
+    [data.tahun, Boolean(data.aktif), id, sekolahId]
+  );
+  return result.affectedRows > 0;
+}
+
+async function deleteTahunAjaran(id, sekolahId) {
+  const [result] = await pool.query(
+    'DELETE FROM tahun_ajaran WHERE id = ? AND sekolah_id = ?',
+    [id, sekolahId]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   listTahunAjaran,
   createTahunAjaran,
+  updateTahunAjaran,
+  deleteTahunAjaran,
 };

@@ -4,7 +4,8 @@ const { createError, parsePagination } = require('../shared/service');
 
 async function list(query) {
   const pagination = parsePagination(query, 'nama', new Set(['nama', 'kode']));
-  return mataPelajaranModel.listMataPelajaran(pagination);
+  const sekolahId = query.sekolah_id;
+  return mataPelajaranModel.listMataPelajaran({ ...pagination, sekolahId });
 }
 
 async function create(data) {
@@ -14,13 +15,29 @@ async function create(data) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw createError('Kode mata pelajaran sudah terdaftar', 409, ErrorCode.DUPLICATE_DATA);
     }
-
     throw error;
   }
+}
+
+async function update(id, data) {
+  const sekolahId = data.sekolah_id;
+  if (!sekolahId) throw createError('Sekolah ID is required', 400);
+  const success = await mataPelajaranModel.updateMataPelajaran(id, data, sekolahId);
+  if (!success) throw createError('Mata pelajaran tidak ditemukan atau akses ditolak', 404);
+  return { id, ...data };
+}
+
+async function remove(id, query) {
+  const sekolahId = query.sekolah_id;
+  if (!sekolahId) throw createError('Sekolah ID is required', 400);
+  const success = await mataPelajaranModel.deleteMataPelajaran(id, sekolahId);
+  if (!success) throw createError('Mata pelajaran tidak ditemukan atau akses ditolak', 404);
+  return { id, deleted: true };
 }
 
 module.exports = {
   list,
   create,
+  update,
+  remove,
 };
-
