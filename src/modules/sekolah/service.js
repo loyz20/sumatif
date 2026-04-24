@@ -1,5 +1,6 @@
 const ErrorCode = require('../../constants/errorCodes');
 const sekolahModel = require('./model');
+const userManagementModel = require('../userManagement/model');
 const { createError, parsePagination } = require('../shared/service');
 
 const SEKOLAH_SORT_FIELDS = new Set([
@@ -23,13 +24,47 @@ async function detail(id) {
 }
 
 async function create(data) {
+  let sekolah;
+
   try {
-    return await sekolahModel.createSekolah(data);
+    sekolah = await sekolahModel.createSekolah(data);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw createError('NPSN sudah terdaftar', 409, ErrorCode.DUPLICATE_DATA);
     }
+    throw error;
+  }
 
+  // Auto-create admin user for the new school
+  const adminUsername = `admin_${data.npsn}`;
+  const adminPassword = 'admin123';
+
+  try {
+    const adminUser = await userManagementModel.createUser({
+      sekolah_id: sekolah.id,
+      username: adminUsername,
+      password: adminPassword,
+      role: 'admin',
+    });
+
+    return {
+      ...sekolah,
+      admin_user: {
+        id: adminUser.id,
+        username: adminUsername,
+        default_password: adminPassword,
+      },
+    };
+  } catch (error) {
+    // If admin creation fails due to duplicate username, still return school
+    // but warn about the admin user
+    if (error.code === 'ER_DUP_ENTRY') {
+      return {
+        ...sekolah,
+        admin_user: null,
+        admin_warning: `Username "${adminUsername}" sudah digunakan. Silakan buat admin secara manual.`,
+      };
+    }
     throw error;
   }
 }

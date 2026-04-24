@@ -9,11 +9,13 @@ const {
 	updatePtkSchema,
 	listPtkQuerySchema,
 	createPtkRiwayatPendidikanSchema,
+	importPtkSchema,
 } = require('../../validations/ptk.schema');
 
 const router = express.Router();
 
 router.get('/', authorize('admin', 'guru'), validateRequest(listPtkQuerySchema, 'query'), ptkController.list);
+router.post('/import', authorize('admin'), validateRequest(importPtkSchema), ptkController.importData);
 router.post('/', authorize('admin'), validateRequest(createPtkSchema), ptkController.create);
 router.get('/:id', authorize('admin', 'guru'), validateRequest(idParamsSchema, 'params'), ptkController.detail);
 router.put('/:id', authorize('admin'), validateRequest(idParamsSchema, 'params'), validateRequest(updatePtkSchema), ptkController.update);

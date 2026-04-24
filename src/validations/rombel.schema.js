@@ -5,7 +5,7 @@ const createRombelSchema = z.object({
   tingkat: z.number().min(1).max(12),
   sekolah_id: z.string().uuid('Sekolah tidak valid'),
   tahun_ajaran_id: z.string().uuid('Tahun ajaran tidak valid'),
-  wali_kelas_ptk_id: z.string().uuid('Wali kelas tidak valid'),
+  wali_kelas_ptk_id: z.string().uuid('Wali kelas tidak valid').nullish().or(z.literal('')),
 });
 
 const updateRombelSchema = createRombelSchema.partial();

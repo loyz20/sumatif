@@ -138,14 +138,18 @@ const SISWA_UPDATABLE_FIELDS = new Set([
   'tanggal_lahir', 'nama_ayah', 'nama_ibu',
 ]);
 
-async function updateSiswa(id, data) {
+async function updateSiswa(id, data, sekolahId) {
   const fields = [];
   const values = [];
 
   for (const [key, value] of Object.entries(data)) {
     if (SISWA_UPDATABLE_FIELDS.has(key)) {
       fields.push(`${key} = ?`);
-      values.push(value);
+      if (['nisn', 'nik', 'jenis_kelamin', 'tanggal_lahir', 'nama_ayah', 'nama_ibu'].includes(key) && value === '') {
+        values.push(null);
+      } else {
+        values.push(value);
+      }
     }
   }
 
@@ -154,8 +158,8 @@ async function updateSiswa(id, data) {
     await connection.beginTransaction();
 
     if (fields.length > 0) {
-      values.push(id);
-      await connection.query(`UPDATE peserta_didik SET ${fields.join(', ')} WHERE id = ?`, values);
+      values.push(id, sekolahId);
+      await connection.query(`UPDATE peserta_didik SET ${fields.join(', ')} WHERE id = ? AND sekolah_id = ?`, values);
     }
 
     if (data.rombel_id !== undefined) {

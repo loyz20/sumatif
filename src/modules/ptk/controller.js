@@ -68,10 +68,27 @@ async function remove(req, res, next) {
   }
 }
 
+async function importData(req, res, next) {
+  try {
+    const result = await ptkService.importData(req.body.items, req.user.sekolah_id);
+    await logActivity({
+      userId: req.user.id,
+      action: 'IMPORT_PTK',
+      entityType: 'ptk',
+      entityId: null,
+      description: `Mengimpor ${result.successCount} data guru/PTK`
+    });
+    return successResponse(res, result, 'Import completed', 201);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   list,
   detail,
   create,
   update,
   remove,
+  importData,
 };

@@ -109,12 +109,12 @@ async function createPtk(data) {
 			id,
 			data.sekolah_id,
 			data.nama,
-			data.nik,
+			data.nik || null,
 			data.nip,
-			data.nuptk,
-			data.jenis_kelamin,
-			data.tanggal_lahir,
-			data.pendidikan_terakhir,
+			data.nuptk || null,
+			data.jenis_kelamin || null,
+			data.tanggal_lahir || null,
+			data.pendidikan_terakhir || null,
 		]
 	);
 
@@ -133,7 +133,12 @@ async function updatePtk(id, data, sekolahId) {
 	for (const [key, value] of Object.entries(data)) {
 		if (PTK_UPDATABLE_FIELDS.has(key)) {
 			fields.push(`${key} = ?`);
-			values.push(value);
+			// Convert empty string to null for optional fields
+			if (['nik', 'nuptk', 'jenis_kelamin', 'tanggal_lahir', 'pendidikan_terakhir'].includes(key) && value === '') {
+				values.push(null);
+			} else {
+				values.push(value);
+			}
 		}
 	}
 

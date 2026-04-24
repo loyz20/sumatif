@@ -2,13 +2,15 @@ const { z } = require('zod');
 
 const createSiswaSchema = z.object({
   nama: z.string().min(1, 'Nama wajib diisi'),
-  nisn: z.string().min(5, 'NISN tidak valid'),
-  nik: z.string().length(16, 'NIK harus 16 digit'),
-  jenis_kelamin: z.enum(['L', 'P']),
-  tanggal_lahir: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal lahir tidak valid'),
+  nis: z.string().min(1, 'NIS wajib diisi'),
+  nisn: z.string().nullish().or(z.literal('')),
+  nik: z.string().regex(/^(\d{16})?$/, 'NIK harus 16 digit').nullish().or(z.literal('')),
+  jenis_kelamin: z.enum(['L', 'P']).nullish().or(z.literal('')),
+  tanggal_lahir: z.string().regex(/^(\d{4}-\d{2}-\d{2})?$/, 'Tanggal lahir tidak valid').nullish().or(z.literal('')),
   sekolah_id: z.string().uuid('Sekolah tidak valid'),
   nama_ayah: z.string().optional(),
   nama_ibu: z.string().optional(),
+  rombel_id: z.string().uuid('Rombel tidak valid').nullish().or(z.literal('')),
 });
 
 const updateSiswaSchema = createSiswaSchema.partial();

@@ -55,10 +55,30 @@ async function listPembelajaran(req, res, next) {
   }
 }
 
+async function update(req, res, next) {
+  try {
+    const result = await rombelService.update(req.params.id, req.body, req.query);
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function remove(req, res, next) {
+  try {
+    await rombelService.remove(req.params.id, req.query);
+    return successResponse(res, null, 'Data berhasil dihapus');
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   list,
   detail,
   create,
+  update,
+  remove,
   addAnggota,
   listAnggota,
   listPembelajaran,

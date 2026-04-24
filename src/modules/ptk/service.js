@@ -24,6 +24,8 @@ async function detail(id, query) {
   return ptk;
 }
 
+const userManagementModel = require('../userManagement/model');
+
 async function create(data) {
   const conflicts = await ptkModel.findPtkConflicts({
     nik: data.nik,
@@ -35,8 +37,9 @@ async function create(data) {
     throw createError('Data PTK duplikat', 409, ErrorCode.DUPLICATE_DATA);
   }
 
+  let ptk;
   try {
-    return await ptkModel.createPtk(data);
+    ptk = await ptkModel.createPtk(data);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw createError('Data PTK duplikat', 409, ErrorCode.DUPLICATE_DATA);
@@ -47,6 +50,32 @@ async function create(data) {
     }
 
     throw error;
+  }
+
+  // Auto-create guru user
+  const guruUsername = data.nip;
+  const guruPassword = 'guru123';
+
+  try {
+    const guruUser = await userManagementModel.createUser({
+      sekolah_id: ptk.sekolah_id,
+      username: guruUsername,
+      password: guruPassword,
+      role: 'guru',
+      ref_id: ptk.id,
+    });
+
+    return {
+      ...ptk,
+      user: {
+        id: guruUser.id,
+        username: guruUsername,
+        default_password: guruPassword,
+      },
+    };
+  } catch (error) {
+    // If user creation fails (e.g. duplicate username), still return the created PTK
+    return ptk;
   }
 }
 
@@ -96,10 +125,30 @@ async function remove(id, query) {
   return true;
 }
 
+async function importData(dataList, sekolahId) {
+  let successCount = 0;
+  let failedCount = 0;
+  const errors = [];
+
+  for (const item of dataList) {
+    try {
+      item.sekolah_id = sekolahId;
+      await create(item);
+      successCount++;
+    } catch (error) {
+      failedCount++;
+      errors.push({ item, error: error.message || 'Gagal mengimpor' });
+    }
+  }
+
+  return { successCount, failedCount, errors };
+}
+
 module.exports = {
   list,
   detail,
   create,
   update,
   remove,
+  importData,
 };

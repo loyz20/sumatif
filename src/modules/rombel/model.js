@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/db');
 
-async function listRombel({ search, page, limit, sortField, sortDirection, tahunAjaranId }) {
+async function listRombel({ search, page, limit, sortField, sortDirection, sekolahId, tahunAjaranId }) {
   const filters = [];
   const values = [];
 
@@ -27,6 +27,7 @@ async function listRombel({ search, page, limit, sortField, sortDirection, tahun
      FROM rombel r
      LEFT JOIN sekolah s ON s.id = r.sekolah_id
      LEFT JOIN ptk p ON p.id = r.wali_kelas_ptk_id
+     LEFT JOIN tahun_ajaran ta ON ta.id = r.tahun_ajaran_id
      ${whereClause}`,
     values
   );
@@ -37,10 +38,12 @@ async function listRombel({ search, page, limit, sortField, sortDirection, tahun
   const [rows] = await pool.query(
     `SELECT r.id, r.sekolah_id, r.tahun_ajaran_id, r.nama, r.tingkat, r.wali_kelas_ptk_id,
             s.nama AS sekolah_nama,
-            p.nama AS wali_kelas_nama
+            p.nama AS wali_kelas_nama,
+            ta.tahun AS tahun_ajaran_nama
      FROM rombel r
      LEFT JOIN sekolah s ON s.id = r.sekolah_id
      LEFT JOIN ptk p ON p.id = r.wali_kelas_ptk_id
+     LEFT JOIN tahun_ajaran ta ON ta.id = r.tahun_ajaran_id
      ${whereClause}
      ORDER BY r.${sortField} ${sortDirection}
      LIMIT ? OFFSET ?`,
@@ -82,7 +85,7 @@ async function createRombel(data) {
   await pool.query(
     `INSERT INTO rombel (id, sekolah_id, tahun_ajaran_id, nama, tingkat, wali_kelas_ptk_id)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, data.sekolah_id, data.tahun_ajaran_id, data.nama, data.tingkat, data.wali_kelas_ptk_id]
+    [id, data.sekolah_id, data.tahun_ajaran_id, data.nama, data.tingkat, data.wali_kelas_ptk_id || null]
   );
 
   return findRombelById(id);
@@ -120,10 +123,36 @@ async function listAnggotaRombel(rombelId) {
   return rows;
 }
 
+async function updateRombel(id, data, sekolahId) {
+  const fields = [];
+  const values = [];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (['nama', 'tingkat', 'tahun_ajaran_id', 'wali_kelas_ptk_id'].includes(key)) {
+      fields.push(`${key} = ?`);
+      values.push(value === '' && key === 'wali_kelas_ptk_id' ? null : value);
+    }
+  }
+
+  if (fields.length === 0) return findRombelById(id, sekolahId);
+
+  values.push(id, sekolahId);
+  await pool.query(`UPDATE rombel SET ${fields.join(', ')} WHERE id = ? AND sekolah_id = ?`, values);
+
+  return findRombelById(id, sekolahId);
+}
+
+async function deleteRombel(id, sekolahId) {
+  const [result] = await pool.query('DELETE FROM rombel WHERE id = ? AND sekolah_id = ?', [id, sekolahId]);
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   listRombel,
   findRombelById,
   createRombel,
+  updateRombel,
+  deleteRombel,
   addAnggotaRombel,
   listAnggotaRombel,
 };

@@ -70,10 +70,49 @@ async function listPembelajaran(rombelId, query) {
   return pembelajaranModel.listPembelajaranByRombel(rombelId);
 }
 
+async function update(id, data, query) {
+  const sekolahId = query.sekolah_id ? String(query.sekolah_id).trim() : '';
+  const rombel = await rombelModel.findRombelById(id, sekolahId);
+  
+  if (!rombel) {
+    throw createError('Data tidak ditemukan', 404, ErrorCode.NOT_FOUND);
+  }
+
+  try {
+    return await rombelModel.updateRombel(id, data, sekolahId);
+  } catch (error) {
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      throw createError('Data relasi rombel tidak ditemukan', 400, ErrorCode.VALIDATION_ERROR);
+    }
+    throw error;
+  }
+}
+
+async function remove(id, query) {
+  const sekolahId = query.sekolah_id ? String(query.sekolah_id).trim() : '';
+  const rombel = await rombelModel.findRombelById(id, sekolahId);
+  
+  if (!rombel) {
+    throw createError('Data tidak ditemukan', 404, ErrorCode.NOT_FOUND);
+  }
+
+  try {
+    await rombelModel.deleteRombel(id, sekolahId);
+    return true;
+  } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      throw createError('Rombel ini tidak dapat dihapus karena masih digunakan', 400, ErrorCode.VALIDATION_ERROR);
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   list,
   detail,
   create,
+  update,
+  remove,
   addAnggota,
   listAnggota,
   listPembelajaran,
