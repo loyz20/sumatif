@@ -24,6 +24,7 @@ const notificationRoutes = require('./notification.routes');
 const bimbinganKonselingRoutes = require('./bimbingan-konseling.routes');
 const jurnalRoutes = require('../../modules/jurnal/routes');
 const waliKelasRoutes = require('../../modules/waliKelas/routes');
+const perencanaanRoutes = require('./perencanaan.routes');
 
 const router = express.Router();
 
@@ -70,6 +71,7 @@ router.use('/bimbingan-konseling', bimbinganKonselingRoutes);
 router.use('/jurnal', jurnalRoutes);
 router.use('/pengumuman', require('../../modules/pengumuman/routes'));
 router.use('/wali-kelas', authenticate, tenantMiddleware, waliKelasRoutes);
+router.use('/perencanaan', authenticate, tenantMiddleware, perencanaanRoutes);
 
 router.get('/activity-log/stats', authenticate, tenantMiddleware, require('../../modules/activityLog/controller').stats);
 router.get('/activity-log', authenticate, tenantMiddleware, require('../../modules/activityLog/controller').list);
