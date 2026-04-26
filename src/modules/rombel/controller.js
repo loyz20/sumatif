@@ -73,6 +73,33 @@ async function remove(req, res, next) {
   }
 }
 
+const { logActivity } = require('../../shared/activityLog');
+
+async function importData(req, res, next) {
+  try {
+    const result = await rombelService.importData(req.body.items, req.user.sekolah_id);
+    await logActivity({
+      userId: req.user.id,
+      action: 'IMPORT_ROMBEL',
+      entityType: 'rombel',
+      entityId: null,
+      description: `Mengimpor ${result.successCount} data rombel/kelas`
+    });
+    return successResponse(res, result, 'Import completed', 201);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function stats(req, res, next) {
+  try {
+    const result = await rombelService.stats(req.query);
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   list,
   detail,
@@ -82,4 +109,6 @@ module.exports = {
   addAnggota,
   listAnggota,
   listPembelajaran,
+  importData,
+  stats,
 };

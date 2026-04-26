@@ -14,13 +14,14 @@ const {
 
 const router = express.Router();
 
-router.get('/', authorize('admin', 'guru'), validateRequest(listPtkQuerySchema, 'query'), ptkController.list);
+router.get('/', authorize('admin', 'guru', 'guru_bk'), validateRequest(listPtkQuerySchema, 'query'), ptkController.list);
+router.get('/stats', authorize('admin', 'guru', 'guru_bk'), ptkController.stats);
 router.post('/import', authorize('admin'), validateRequest(importPtkSchema), ptkController.importData);
 router.post('/', authorize('admin'), validateRequest(createPtkSchema), ptkController.create);
-router.get('/:id', authorize('admin', 'guru'), validateRequest(idParamsSchema, 'params'), ptkController.detail);
+router.get('/:id', authorize('admin', 'guru', 'guru_bk'), validateRequest(idParamsSchema, 'params'), ptkController.detail);
 router.put('/:id', authorize('admin'), validateRequest(idParamsSchema, 'params'), validateRequest(updatePtkSchema), ptkController.update);
 router.delete('/:id', authorize('admin'), validateRequest(idParamsSchema, 'params'), ptkController.remove);
-router.get('/:id/riwayat-pendidikan', authorize('admin', 'guru'), validateRequest(idParamsSchema, 'params'), ptkRiwayatController.listPendidikan);
+router.get('/:id/riwayat-pendidikan', authorize('admin', 'guru', 'guru_bk'), validateRequest(idParamsSchema, 'params'), ptkRiwayatController.listPendidikan);
 router.post(
 	'/:id/riwayat-pendidikan',
 	authorize('admin'),
@@ -28,6 +29,6 @@ router.post(
 	validateRequest(createPtkRiwayatPendidikanSchema),
 	ptkRiwayatController.createPendidikan
 );
-router.get('/:id/riwayat-kepangkatan', authorize('admin', 'guru'), validateRequest(idParamsSchema, 'params'), ptkRiwayatController.listKepangkatan);
+router.get('/:id/riwayat-kepangkatan', authorize('admin', 'guru', 'guru_bk'), validateRequest(idParamsSchema, 'params'), ptkRiwayatController.listKepangkatan);
 
 module.exports = router;

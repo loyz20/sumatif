@@ -36,8 +36,8 @@ async function create(data) {
   }
 
   // Auto-create admin user for the new school
-  const adminUsername = `admin_${data.npsn}`;
-  const adminPassword = 'admin123';
+  const adminUsername = data.npsn;
+  const adminPassword = data.npsn;
 
   try {
     const adminUser = await userManagementModel.createUser({
@@ -97,10 +97,24 @@ async function remove(id) {
   return true;
 }
 
+async function getStats() {
+  return sekolahModel.getSekolahStats();
+}
+
+async function updateLogo(id, logoUrl) {
+  const sekolah = await sekolahModel.findSekolahById(id);
+  if (!sekolah) {
+    throw createError('Data sekolah tidak ditemukan', 404, ErrorCode.NOT_FOUND);
+  }
+  return await sekolahModel.updateLogo(id, logoUrl);
+}
+
 module.exports = {
   list,
   detail,
   create,
   update,
+  updateLogo,
   remove,
+  getStats,
 };

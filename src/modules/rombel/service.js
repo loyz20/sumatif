@@ -67,7 +67,7 @@ async function listPembelajaran(rombelId, query) {
     throw createError('Data rombel tidak ditemukan', 404, ErrorCode.NOT_FOUND);
   }
 
-  return pembelajaranModel.listPembelajaranByRombel(rombelId);
+  return pembelajaranModel.listPembelajaranByRombel(rombelId, sekolahId);
 }
 
 async function update(id, data, query) {
@@ -107,6 +107,30 @@ async function remove(id, query) {
   }
 }
 
+async function importData(dataList, sekolahId) {
+  let successCount = 0;
+  let failedCount = 0;
+  const errors = [];
+
+  for (const item of dataList) {
+    try {
+      item.sekolah_id = sekolahId;
+      await create(item);
+      successCount++;
+    } catch (error) {
+      failedCount++;
+      errors.push({ item, error: error.message || 'Gagal mengimpor' });
+    }
+  }
+
+  return { successCount, failedCount, errors };
+}
+
+async function stats(query) {
+  const sekolahId = query.sekolah_id;
+  return await rombelModel.getRombelStats(sekolahId);
+}
+
 module.exports = {
   list,
   detail,
@@ -116,5 +140,7 @@ module.exports = {
   addAnggota,
   listAnggota,
   listPembelajaran,
+  importData,
+  stats,
 };
 

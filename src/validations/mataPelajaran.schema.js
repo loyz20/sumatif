@@ -14,7 +14,12 @@ const listMataPelajaranQuerySchema = z.object({
   sekolah_id: z.string().uuid('Sekolah tidak valid').optional(),
 });
 
+const importMataPelajaranSchema = z.object({
+  items: z.array(createMataPelajaranSchema),
+});
+
 module.exports = {
   createMataPelajaranSchema,
   listMataPelajaranQuerySchema,
+  importMataPelajaranSchema,
 };

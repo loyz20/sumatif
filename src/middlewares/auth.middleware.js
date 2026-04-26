@@ -3,7 +3,7 @@ const { errorResponse } = require('../utils/response');
 const ErrorCode = require('../constants/errorCodes');
 
 /**
- * Middleware that verifies JWT access token from the Authorization header.
+ * Middleware that verifies JWT access token from httpOnly cookies or Authorization header.
  * On success, attaches decoded payload to req.user with:
  *   - id (from sub)
  *   - role
@@ -11,13 +11,19 @@ const ErrorCode = require('../constants/errorCodes');
  *   - jti
  */
 function authenticate(req, res, next) {
-  const authHeader = req.headers.authorization;
+  // Try to get token from httpOnly cookie first, then fallback to Authorization header
+  let token = req.cookies?.access_token;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return errorResponse(res, 'Token tidak ditemukan', null, 401, ErrorCode.UNAUTHORIZED);
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    }
   }
 
-  const token = authHeader.slice(7);
+  if (!token) {
+    return errorResponse(res, 'Token tidak ditemukan', null, 401, ErrorCode.UNAUTHORIZED);
+  }
 
   try {
     const decoded = verifyAccessToken(token);
@@ -26,6 +32,7 @@ function authenticate(req, res, next) {
       id: decoded.sub,
       role: decoded.role,
       sekolah_id: decoded.sekolah_id,
+      ref_id: decoded.ref_id,
       jti: decoded.jti,
     };
 
@@ -39,6 +46,21 @@ function authenticate(req, res, next) {
   }
 }
 
+function authorize(...roles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return errorResponse(res, 'Sesi berakhir, silakan login kembali', null, 401, ErrorCode.UNAUTHORIZED);
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return errorResponse(res, 'Anda tidak memiliki akses untuk melakukan aksi ini', null, 403, ErrorCode.FORBIDDEN);
+    }
+
+    return next();
+  };
+}
+
 module.exports = {
   authenticate,
+  authorize,
 };

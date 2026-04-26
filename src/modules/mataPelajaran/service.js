@@ -35,9 +35,29 @@ async function remove(id, query) {
   return { id, deleted: true };
 }
 
+async function importData(dataList, sekolahId) {
+  let successCount = 0;
+  let failedCount = 0;
+  const errors = [];
+
+  for (const item of dataList) {
+    try {
+      item.sekolah_id = sekolahId;
+      await create(item);
+      successCount++;
+    } catch (error) {
+      failedCount++;
+      errors.push({ item, error: error.message || 'Gagal mengimpor' });
+    }
+  }
+
+  return { successCount, failedCount, errors };
+}
+
 module.exports = {
   list,
   create,
   update,
   remove,
+  importData,
 };

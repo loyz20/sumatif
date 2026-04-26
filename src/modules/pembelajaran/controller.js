@@ -28,9 +28,40 @@ async function remove(req, res, next) {
   }
 }
 
+async function list(req, res, next) {
+  try {
+    const result = await pembelajaranService.list(req.query, req.user);
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function listByRombel(req, res, next) {
   try {
     const result = await pembelajaranService.listByRombel(req.params.rombelId, req.query);
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listKomponen(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { semester_id } = req.query;
+    const result = await pembelajaranService.listKomponen(id, semester_id);
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function saveKomponen(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { semester_id, komponen } = req.body;
+    const result = await pembelajaranService.saveKomponen(id, semester_id, req.user.sekolah_id, komponen, req.user.id);
     return successResponse(res, result);
   } catch (error) {
     return next(error);
@@ -41,5 +72,8 @@ module.exports = {
   create,
   update,
   remove,
+  list,
   listByRombel,
+  listKomponen,
+  saveKomponen,
 };

@@ -2,7 +2,6 @@ const { z } = require('zod');
 
 const createPtkSchema = z.object({
   nama: z.string().min(1, 'Nama wajib diisi'),
-  nik: z.string().regex(/^(\d{16})?$/, 'NIK harus 16 digit').nullish().or(z.literal('')),
   nip: z.string().min(1, 'NIP wajib diisi'),
   nuptk: z.string().nullish().or(z.literal('')),
   jenis_kelamin: z.enum(['L', 'P']).nullish().or(z.literal('')),
@@ -18,7 +17,11 @@ const listPtkQuerySchema = z.object({
   limit: z.string().optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
+  sortField: z.string().optional(),
+  sortDirection: z.enum(['ASC', 'DESC']).optional(),
   sekolah_id: z.string().uuid('Sekolah tidak valid').optional(),
+  jenis_kelamin: z.enum(['L', 'P']).optional().or(z.literal('')),
+  pendidikan_terakhir: z.string().optional().or(z.literal('')),
 });
 
 const createPtkRiwayatPendidikanSchema = z.object({

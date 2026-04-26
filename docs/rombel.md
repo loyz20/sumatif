@@ -9,7 +9,7 @@ Base path: `/api/v1/rombel`
 | Method | Role |
 |--------|------|
 | GET | admin, guru |
-| POST /, POST /:id/anggota | admin |
+| POST /, POST /:id/anggota, POST /import | admin |
 
 ---
 
@@ -59,3 +59,36 @@ List anggota rombel. Response: array `{ id, rombel_id, peserta_didik_id, peserta
 ## GET /:id/pembelajaran
 
 List pembelajaran rombel. Response: array `{ id, rombel_id, mata_pelajaran_id, ptk_id, jam_per_minggu, mata_pelajaran_nama, mata_pelajaran_kode, ptk_nama }`.
+
+---
+
+## POST /import
+
+Impor banyak data rombel sekaligus.
+
+**Request Body:**
+```json
+{
+  "items": [
+    {
+      "nama": "VII-A",
+      "tingkat": 7,
+      "tahun_ajaran_id": "uuid",
+      "wali_kelas_ptk_id": "uuid"
+    }
+  ]
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Import completed",
+  "data": {
+    "successCount": 1,
+    "failedCount": 0,
+    "errors": []
+  }
+}
+```

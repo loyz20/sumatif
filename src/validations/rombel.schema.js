@@ -3,7 +3,7 @@ const { z } = require('zod');
 const createRombelSchema = z.object({
   nama: z.string().min(1, 'Nama wajib diisi'),
   tingkat: z.number().min(1).max(12),
-  sekolah_id: z.string().uuid('Sekolah tidak valid'),
+  sekolah_id: z.string().uuid('Sekolah tidak valid').optional(),
   tahun_ajaran_id: z.string().uuid('Tahun ajaran tidak valid'),
   wali_kelas_ptk_id: z.string().uuid('Wali kelas tidak valid').nullish().or(z.literal('')),
 });
@@ -22,9 +22,14 @@ const addAnggotaRombelSchema = z.object({
   peserta_didik_id: z.string().uuid('Peserta didik tidak valid'),
 });
 
+const importRombelSchema = z.object({
+  items: z.array(createRombelSchema),
+});
+
 module.exports = {
   createRombelSchema,
   updateRombelSchema,
   listRombelQuerySchema,
   addAnggotaRombelSchema,
+  importRombelSchema,
 };

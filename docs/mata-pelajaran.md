@@ -10,6 +10,7 @@ Base path: `/api/v1/mata-pelajaran`
 |--------|------|
 | GET /  | admin, guru |
 | POST / | admin |
+| POST /import | admin |
 
 ## GET /
 
@@ -39,11 +40,39 @@ Buat mata pelajaran. Body: `nama` (string, required), `kode` (string, required).
 ```
 
 **Response (201):**
-
 ```json
 {
   "success": true,
   "message": "Success",
   "data": { "id": "uuid-v4", "nama": "Matematika", "kode": "MTK101" }
+}
+```
+
+---
+
+## POST /import
+
+Impor banyak mata pelajaran sekaligus.
+
+**Request Body:**
+```json
+{
+  "items": [
+    { "nama": "Fisika", "kode": "FIS-01" },
+    { "nama": "Kimia", "kode": "KIM-01" }
+  ]
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Import completed",
+  "data": {
+    "successCount": 2,
+    "failedCount": 0,
+    "errors": []
+  }
 }
 ```

@@ -13,11 +13,13 @@ const getRelativeTime = (date) => {
 };
 
 const getDashboardSummary = async (user) => {
-  // Kita bisa membatasi response berdasarkan peran (role) pengguna jika diperlukan
-  const [counts, recentLogs, pengumuman] = await Promise.all([
-    dashboardModel.getDashboardCounts(),
-    dashboardModel.getRecentActivities(5),
-    dashboardModel.getPengumuman(5)
+  const [counts, recentLogs, pengumuman, attendanceStats, bkStats, studentData] = await Promise.all([
+    dashboardModel.getDashboardCounts(user.sekolah_id),
+    user.role === 'admin' ? dashboardModel.getRecentActivities(user.sekolah_id, 5) : Promise.resolve([]),
+    dashboardModel.getPengumuman(user.sekolah_id, 5),
+    user.role === 'guru' ? dashboardModel.getAttendanceStats(user.sekolah_id, user.ref_id) : Promise.resolve([]),
+    user.role === 'guru_bk' ? dashboardModel.getBKStats(user.sekolah_id) : Promise.resolve(null),
+    (user.role === 'siswa' && user.ref_id) ? dashboardModel.getStudentDashboardData(user.sekolah_id, user.ref_id) : Promise.resolve(null)
   ]);
 
   // Format log untuk dikirim ke UI
@@ -46,41 +48,47 @@ const getDashboardSummary = async (user) => {
     };
   });
 
-  // Ini hanya contoh balikan untuk mendukung UI di frontend
+  let stats = [];
+  if (user.role === 'admin') {
+    stats = [
+      { title: 'Total Siswa', value: counts.totalSiswa, trend: '+12%' },
+      { title: 'Total Guru', value: counts.totalGuru, trend: '+2%' },
+      { title: 'Total Kelas', value: counts.totalKelas, trend: 'Tetap' },
+      { title: 'Jadwal Hari Ini', value: 12, trend: 'Berjalan' }
+    ];
+  } else if (user.role === 'guru_bk') {
+    stats = [
+      { title: 'Siswa Pembinaan', value: bkStats.critical, trend: '> 50 Poin' },
+      { title: 'Siswa Peringatan', value: bkStats.warning, trend: '> 20 Poin' },
+      { title: 'Konseling Bulan Ini', value: bkStats.konselingMonth, trend: 'Bulan ini' },
+      { title: 'Total Siswa', value: bkStats.total, trend: 'Aktif' }
+    ];
+  } else if (user.role === 'siswa' && studentData) {
+    stats = [
+      { title: 'Poin Net Saya', value: studentData.netPoin, trend: studentData.status },
+      { title: 'Total Pelanggaran', value: studentData.totalPelanggaran, trend: 'Poin' },
+      { title: 'Total Prestasi', value: studentData.totalReward, trend: 'Reward' },
+      { title: 'Kehadiran', value: `${studentData.attendance.hadir}/${studentData.attendance.total}`, trend: 'Pertemuan' }
+    ];
+  } else {
+    // Default / Guru
+    stats = [
+      { title: 'Total Siswa', value: counts.totalSiswa, trend: 'Aktif' },
+      { title: 'Jadwal Mengajar', value: 4, trend: 'Hari ini' },
+      { title: 'Jurnal Diisi', value: 24, trend: 'Bulan ini' },
+      { title: 'Status Akun', value: 1, trend: 'Aktif' }
+    ];
+  }
+
   return {
-    stats: [
-      {
-        title: 'Total Siswa',
-        value: counts.totalSiswa,
-        trend: '+12%',
-      },
-      {
-        title: 'Total Guru',
-        value: counts.totalGuru,
-        trend: '+2%',
-      },
-      {
-        title: 'Mata Pelajaran',
-        value: counts.totalMapel,
-        trend: 'Tetap',
-      },
-      {
-        title: 'Jadwal Hari Ini',
-        value: 12, // Dummy value untuk jadwal
-        trend: 'Berjalan',
-      }
-    ],
-    activities: [
-      { name: 'Sen', hadir: 1150, absen: 84 },
-      { name: 'Sel', hadir: 1180, absen: 54 },
-      { name: 'Rab', hadir: 1120, absen: 114 },
-      { name: 'Kam', hadir: 1200, absen: 34 },
-      { name: 'Jum', hadir: 1190, absen: 44 },
-      { name: 'Sab', hadir: 1220, absen: 14 },
-      { name: 'Min', hadir: 0, absen: 1234 }, // Libur
+    stats,
+    distribution: (user.role === 'admin' || user.role === 'guru_bk') ? counts.distribution : [],
+    activities: attendanceStats.length > 0 ? attendanceStats : [
+      { name: 'N/A', hadir: 0, absen: 0 },
     ],
     recent_logs: formattedLogs,
-    announcements: formattedPengumuman
+    announcements: formattedPengumuman,
+    role_data: { bkStats, studentData }
   };
 };
 

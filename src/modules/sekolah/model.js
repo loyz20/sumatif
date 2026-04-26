@@ -30,7 +30,7 @@ async function listSekolah({ search, page, limit, sortField, sortDirection }) {
 	const offset = (page - 1) * limit;
 
 	const [rows] = await pool.query(
-		`SELECT id, nama, npsn, status, alamat, provinsi, kabupaten, kecamatan, desa, kode_pos, lintang, bujur, created_at
+		`SELECT id, nama, npsn, logo_url, status, alamat, provinsi, kabupaten, kecamatan, desa, kode_pos, lintang, bujur, kepala_sekolah, akreditasi, email, no_telepon, website, created_at
 		 FROM sekolah
 		 ${whereClause}
 		 ORDER BY ${sortField} ${sortDirection}
@@ -51,7 +51,7 @@ async function listSekolah({ search, page, limit, sortField, sortDirection }) {
 
 async function findSekolahById(id) {
 	const [rows] = await pool.query(
-		`SELECT id, nama, npsn, status, alamat, provinsi, kabupaten, kecamatan, desa, kode_pos, lintang, bujur, created_at
+		`SELECT id, nama, npsn, logo_url, status, alamat, provinsi, kabupaten, kecamatan, desa, kode_pos, lintang, bujur, kepala_sekolah, akreditasi, email, no_telepon, website, created_at
 		 FROM sekolah
 		 WHERE id = ?
 		 LIMIT 1`,
@@ -66,8 +66,9 @@ async function createSekolah(data) {
 
 	await pool.query(
 		`INSERT INTO sekolah (
-			id, nama, npsn, status, alamat, provinsi, kabupaten, kecamatan, desa, kode_pos, lintang, bujur
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			id, nama, npsn, status, alamat, provinsi, kabupaten, kecamatan, desa, kode_pos, lintang, bujur,
+      kepala_sekolah, akreditasi, email, no_telepon, website
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		[
 			id,
 			data.nama,
@@ -81,6 +82,11 @@ async function createSekolah(data) {
 			data.kode_pos,
 			data.lintang,
 			data.bujur,
+      data.kepala_sekolah,
+      data.akreditasi,
+      data.email,
+      data.no_telepon,
+      data.website
 		]
 	);
 
@@ -90,6 +96,7 @@ async function createSekolah(data) {
 const SEKOLAH_UPDATABLE_FIELDS = new Set([
 	'nama', 'npsn', 'status', 'alamat', 'provinsi', 'kabupaten',
 	'kecamatan', 'desa', 'kode_pos', 'lintang', 'bujur',
+  'kepala_sekolah', 'akreditasi', 'email', 'no_telepon', 'website',
 ]);
 
 async function updateSekolah(id, data) {
@@ -122,10 +129,31 @@ async function deleteSekolah(id) {
 	return result.affectedRows > 0;
 }
 
+async function getSekolahStats() {
+	const [rows] = await pool.query(`
+		SELECT 
+			COUNT(*) as total,
+			COUNT(CASE WHEN status = 'Negeri' THEN 1 END) as negeri,
+			COUNT(CASE WHEN status = 'Swasta' THEN 1 END) as swasta
+		FROM sekolah
+	`);
+	return rows[0];
+}
+
+async function updateLogo(id, logoUrl) {
+  await pool.query(
+    'UPDATE sekolah SET logo_url = ? WHERE id = ?',
+    [logoUrl, id]
+  );
+  return await findSekolahById(id);
+}
+
 module.exports = {
 	listSekolah,
 	findSekolahById,
 	createSekolah,
 	updateSekolah,
+	updateLogo,
 	deleteSekolah,
+	getSekolahStats,
 };

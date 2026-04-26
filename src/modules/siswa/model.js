@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/db');
 
-async function listSiswa({ search, page, limit, sortField, sortDirection, sekolahId }) {
+async function listSiswa({ search, page, limit, sortField, sortDirection, sekolahId, jenisKelamin, rombelId }) {
   const filters = [];
   const values = [];
 
@@ -10,24 +10,52 @@ async function listSiswa({ search, page, limit, sortField, sortDirection, sekola
     values.push(sekolahId);
   }
 
+  if (jenisKelamin) {
+    filters.push('p.jenis_kelamin = ?');
+    values.push(jenisKelamin);
+  }
+
+  if (rombelId) {
+    filters.push('ar.rombel_id = ?');
+    values.push(rombelId);
+  }
+
   if (search) {
-    filters.push('(p.nama LIKE ? OR p.nis LIKE ? OR p.nisn LIKE ? OR p.nik LIKE ?)');
+    filters.push('(p.nama LIKE ? OR p.nis LIKE ? OR p.nisn LIKE ? OR p.tempat_lahir LIKE ?)');
     const keyword = `%${search}%`;
     values.push(keyword, keyword, keyword, keyword);
   }
 
+  const joinClause = `
+    LEFT JOIN anggota_rombel ar ON p.id = ar.peserta_didik_id
+    LEFT JOIN rombel r ON ar.rombel_id = r.id
+  `;
+
   const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-  const [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM peserta_didik p ${whereClause}`, values);
+  const [countRows] = await pool.query(
+    `SELECT COUNT(DISTINCT p.id) AS total FROM peserta_didik p ${joinClause} ${whereClause}`, 
+    values
+  );
+  
   const total = Number(countRows[0]?.total || 0);
   const offset = (page - 1) * limit;
 
+  const sortMap = {
+    nama: 'p.nama',
+    nis: 'p.nis',
+    nisn: 'p.nisn',
+    jenis_kelamin: 'p.jenis_kelamin',
+    kelas: 'r.nama',
+    tingkat: 'r.tingkat'
+  };
+  const orderBy = sortMap[sortField] || 'p.nama';
+
   const [rows] = await pool.query(
-    `SELECT p.id, p.sekolah_id, p.nama, p.nis, p.nisn, p.nik, p.jenis_kelamin, p.tanggal_lahir, p.nama_ayah, p.nama_ibu, r.tingkat, r.nama as kelas, ar.rombel_id
+    `SELECT p.id, p.sekolah_id, p.nama, p.tempat_lahir, p.nis, p.nisn, p.jenis_kelamin, p.tanggal_lahir, p.nama_ayah, p.nama_ibu, r.tingkat, r.nama as kelas, ar.rombel_id
      FROM peserta_didik p
-     LEFT JOIN anggota_rombel ar ON p.id = ar.peserta_didik_id
-     LEFT JOIN rombel r ON ar.rombel_id = r.id
+     ${joinClause}
      ${whereClause}
-     ORDER BY p.${sortField} ${sortDirection}
+     ORDER BY ${orderBy} ${sortDirection}
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
@@ -53,9 +81,10 @@ async function findSiswaById(id, sekolahId) {
   }
 
   const [rows] = await pool.query(
-    `SELECT p.id, p.sekolah_id, p.nama, p.nis, p.nisn, p.nik, p.jenis_kelamin, p.tanggal_lahir, p.nama_ayah, p.nama_ibu, ar.rombel_id
+    `SELECT p.id, p.sekolah_id, p.nama, p.tempat_lahir, p.nis, p.nisn, p.jenis_kelamin, p.tanggal_lahir, p.nama_ayah, p.nama_ibu, ar.rombel_id, r.nama as kelas, r.tingkat
      FROM peserta_didik p
      LEFT JOIN anggota_rombel ar ON p.id = ar.peserta_didik_id
+     LEFT JOIN rombel r ON ar.rombel_id = r.id
      WHERE p.id = ?${filter}
      LIMIT 1`,
     values
@@ -82,7 +111,7 @@ async function findSiswaConflicts({ nisn, nik }, exceptId) {
     return [];
   }
 
-  let query = `SELECT id, nisn, nik FROM peserta_didik WHERE (${conditions.join(' OR ')})`;
+  let query = `SELECT id, nisn FROM peserta_didik WHERE (${conditions.join(' OR ')})`;
   if (exceptId) {
     query += ' AND id <> ?';
     values.push(exceptId);
@@ -100,15 +129,15 @@ async function createSiswa(data) {
     await connection.beginTransaction();
     await connection.query(
       `INSERT INTO peserta_didik (
-        id, sekolah_id, nama, nis, nisn, nik, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu
+        id, sekolah_id, nama, tempat_lahir, nis, nisn, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         data.sekolah_id || null,
         data.nama,
+        data.tempat_lahir || null,
         data.nis,
         data.nisn || null,
-        data.nik || null,
         data.jenis_kelamin || null,
         data.tanggal_lahir || null,
         data.nama_ayah || null,
@@ -134,7 +163,7 @@ async function createSiswa(data) {
 }
 
 const SISWA_UPDATABLE_FIELDS = new Set([
-  'sekolah_id', 'nama', 'nis', 'nisn', 'nik', 'jenis_kelamin',
+  'sekolah_id', 'nama', 'tempat_lahir', 'nis', 'nisn', 'jenis_kelamin',
   'tanggal_lahir', 'nama_ayah', 'nama_ibu',
 ]);
 
@@ -145,7 +174,7 @@ async function updateSiswa(id, data, sekolahId) {
   for (const [key, value] of Object.entries(data)) {
     if (SISWA_UPDATABLE_FIELDS.has(key)) {
       fields.push(`${key} = ?`);
-      if (['nisn', 'nik', 'jenis_kelamin', 'tanggal_lahir', 'nama_ayah', 'nama_ibu'].includes(key) && value === '') {
+      if (['nisn', 'jenis_kelamin', 'tanggal_lahir', 'nama_ayah', 'nama_ibu', 'tempat_lahir'].includes(key) && value === '') {
         values.push(null);
       } else {
         values.push(value);
@@ -194,11 +223,45 @@ async function deleteSiswa(id, sekolahId) {
   return result.affectedRows > 0;
 }
 
+async function findSiswaByNis(nis, sekolahId) {
+  const [rows] = await pool.query(
+    'SELECT id, nama FROM peserta_didik WHERE nis = ? AND sekolah_id = ? LIMIT 1',
+    [nis, sekolahId]
+  );
+  return rows[0] || null;
+}
+
+async function getSiswaStats(sekolahId) {
+  const [totalStudents] = await pool.query(
+    'SELECT COUNT(*) as count FROM peserta_didik WHERE sekolah_id = ?',
+    [sekolahId]
+  );
+
+  const [genderStats] = await pool.query(
+    'SELECT jenis_kelamin, COUNT(*) as count FROM peserta_didik WHERE sekolah_id = ? GROUP BY jenis_kelamin',
+    [sekolahId]
+  );
+
+  const [activeClasses] = await pool.query(
+    'SELECT COUNT(DISTINCT rombel_id) as count FROM anggota_rombel ar JOIN peserta_didik p ON p.id = ar.peserta_didik_id WHERE p.sekolah_id = ?',
+    [sekolahId]
+  );
+
+  return {
+    totalStudents: totalStudents[0].count,
+    lakiLaki: genderStats.find(g => g.jenis_kelamin === 'L')?.count || 0,
+    perempuan: genderStats.find(g => g.jenis_kelamin === 'P')?.count || 0,
+    activeClasses: activeClasses[0].count
+  };
+}
+
 module.exports = {
   listSiswa,
   findSiswaById,
+  findSiswaByNis,
   findSiswaConflicts,
   createSiswa,
   updateSiswa,
   deleteSiswa,
+  getSiswaStats,
 };

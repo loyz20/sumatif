@@ -8,6 +8,6 @@ const router = express.Router();
 
 router.post('/masuk', authorize('admin', 'guru', 'siswa'), validateRequest(absensiSchema), absensiController.masuk);
 router.post('/keluar', authorize('admin', 'guru', 'siswa'), validateRequest(absensiSchema), absensiController.keluar);
-router.get('/', authorize('admin', 'guru'), validateRequest(rekapAbsensiQuerySchema, 'query'), absensiController.rekap);
+router.get('/', authorize('admin', 'guru', 'guru_bk'), validateRequest(rekapAbsensiQuerySchema, 'query'), absensiController.rekap);
 
 module.exports = router;

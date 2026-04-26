@@ -59,9 +59,26 @@ async function remove(req, res, next) {
   }
 }
 
+async function importData(req, res, next) {
+  try {
+    const result = await mataPelajaranService.importData(req.body.items, req.user.sekolah_id);
+    await logActivity({
+      userId: req.user.id,
+      action: 'IMPORT_MAPEL',
+      entityType: 'mata_pelajaran',
+      entityId: null,
+      description: `Mengimpor ${result.successCount} mata pelajaran`
+    });
+    return successResponse(res, result, 'Import completed', 201);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   list,
   create,
   update,
   remove,
+  importData,
 };

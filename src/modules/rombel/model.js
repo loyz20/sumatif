@@ -70,9 +70,15 @@ async function findRombelById(id, sekolahId) {
   }
 
   const [rows] = await pool.query(
-    `SELECT id, sekolah_id, tahun_ajaran_id, nama, tingkat, wali_kelas_ptk_id
-     FROM rombel
-     WHERE id = ?${filter}
+    `SELECT r.id, r.sekolah_id, r.tahun_ajaran_id, r.nama, r.tingkat, r.wali_kelas_ptk_id,
+            s.nama AS sekolah_nama,
+            p.nama AS wali_kelas_nama,
+            ta.tahun AS tahun_ajaran_nama
+     FROM rombel r
+     LEFT JOIN sekolah s ON s.id = r.sekolah_id
+     LEFT JOIN ptk p ON p.id = r.wali_kelas_ptk_id
+     LEFT JOIN tahun_ajaran ta ON ta.id = r.tahun_ajaran_id
+     WHERE r.id = ?${filter.replace('sekolah_id', 'r.sekolah_id')}
      LIMIT 1`,
     values
   );
@@ -112,7 +118,7 @@ async function addAnggotaRombel(rombelId, pesertaDidikId) {
 
 async function listAnggotaRombel(rombelId) {
   const [rows] = await pool.query(
-    `SELECT ar.id, ar.rombel_id, ar.peserta_didik_id, pd.nama AS peserta_didik_nama, pd.nisn
+    `SELECT pd.id, pd.nama AS peserta_didik_nama, pd.nis, pd.nisn, ar.rombel_id, ar.peserta_didik_id
      FROM anggota_rombel ar
      JOIN peserta_didik pd ON pd.id = ar.peserta_didik_id
      WHERE ar.rombel_id = ?
@@ -147,6 +153,35 @@ async function deleteRombel(id, sekolahId) {
   return result.affectedRows > 0;
 }
 
+async function getRombelStats(sekolahId) {
+  const [totalClasses] = await pool.query(
+    'SELECT COUNT(*) as count FROM rombel WHERE sekolah_id = ?',
+    [sekolahId]
+  );
+
+  const [activeTahunAjaran] = await pool.query(
+    'SELECT tahun FROM tahun_ajaran WHERE aktif = 1 AND sekolah_id = ? LIMIT 1',
+    [sekolahId]
+  );
+
+  const [tingkatStats] = await pool.query(
+    'SELECT tingkat, COUNT(*) as count FROM rombel WHERE sekolah_id = ? GROUP BY tingkat ORDER BY tingkat ASC',
+    [sekolahId]
+  );
+
+  const [totalStudents] = await pool.query(
+    'SELECT COUNT(*) as count FROM anggota_rombel ar JOIN rombel r ON r.id = ar.rombel_id WHERE r.sekolah_id = ?',
+    [sekolahId]
+  );
+
+  return {
+    totalClasses: totalClasses[0].count,
+    totalStudents: totalStudents[0].count,
+    activeTahunAjaran: activeTahunAjaran[0]?.tahun || '-',
+    tingkatStats
+  };
+}
+
 module.exports = {
   listRombel,
   findRombelById,
@@ -155,4 +190,5 @@ module.exports = {
   deleteRombel,
   addAnggotaRombel,
   listAnggotaRombel,
+  getRombelStats,
 };

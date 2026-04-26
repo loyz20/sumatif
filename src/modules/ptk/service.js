@@ -3,14 +3,21 @@ const ptkModel = require('./model');
 const { createError, parsePagination } = require('../shared/service');
 
 const PTK_SORT_FIELDS = new Set([
-  'nama', 'nik', 'nip', 'nuptk',
+  'nama', 'nip', 'nuptk',
   'jenis_kelamin', 'tanggal_lahir', 'pendidikan_terakhir', 'created_at',
 ]);
 
 async function list(query) {
   const pagination = parsePagination(query, 'nama', PTK_SORT_FIELDS);
   const sekolahId = query.sekolah_id ? String(query.sekolah_id).trim() : '';
-  return ptkModel.listPtk({ ...pagination, sekolahId });
+  const { jenis_kelamin, pendidikan_terakhir } = query;
+  
+  return ptkModel.listPtk({ 
+    ...pagination, 
+    sekolahId, 
+    jenis_kelamin, 
+    pendidikan_terakhir 
+  });
 }
 
 async function detail(id, query) {
@@ -28,7 +35,6 @@ const userManagementModel = require('../userManagement/model');
 
 async function create(data) {
   const conflicts = await ptkModel.findPtkConflicts({
-    nik: data.nik,
     nip: data.nip,
     nuptk: data.nuptk,
   });
@@ -88,7 +94,6 @@ async function update(id, data) {
 
   const conflicts = await ptkModel.findPtkConflicts(
     {
-      nik: data.nik,
       nip: data.nip,
       nuptk: data.nuptk,
     },
@@ -144,6 +149,11 @@ async function importData(dataList, sekolahId) {
   return { successCount, failedCount, errors };
 }
 
+async function stats(query) {
+  const sekolahId = query.sekolah_id;
+  return await ptkModel.getPtkStats(sekolahId);
+}
+
 module.exports = {
   list,
   detail,
@@ -151,4 +161,5 @@ module.exports = {
   update,
   remove,
   importData,
+  stats,
 };

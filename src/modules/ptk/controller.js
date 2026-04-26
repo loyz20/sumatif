@@ -84,6 +84,15 @@ async function importData(req, res, next) {
   }
 }
 
+async function stats(req, res, next) {
+  try {
+    const result = await ptkService.stats(req.query);
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   list,
   detail,
@@ -91,4 +100,5 @@ module.exports = {
   update,
   remove,
   importData,
+  stats,
 };

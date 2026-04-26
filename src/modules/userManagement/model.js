@@ -12,20 +12,31 @@ async function listUsers({ search, page, limit, sortField, sortDirection, sekola
   }
 
   if (search) {
-    filters.push('(u.username LIKE ? OR u.role LIKE ?)');
+    filters.push('(u.username LIKE ? OR u.role LIKE ? OR p.nama LIKE ? OR pd.nama LIKE ?)');
     const keyword = `%${search}%`;
-    values.push(keyword, keyword);
+    values.push(keyword, keyword, keyword, keyword);
   }
 
   const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-  const [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM users u ${whereClause}`, values);
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total 
+     FROM users u 
+     LEFT JOIN ptk p ON u.ref_id = p.id AND u.role IN ('guru', 'guru_bk')
+     LEFT JOIN peserta_didik pd ON u.ref_id = pd.id AND u.role = 'siswa'
+     ${whereClause}`, 
+    values
+  );
   const total = Number(countRows[0]?.total || 0);
   const offset = (page - 1) * limit;
 
   const [rows] = await pool.query(
-    `SELECT u.id, u.sekolah_id, u.username, u.role, u.ref_id, u.created_at, s.nama as nama_sekolah
+    `SELECT u.id, u.sekolah_id, u.username, u.role, u.ref_id, u.created_at, 
+            s.nama as nama_sekolah,
+            COALESCE(p.nama, pd.nama, 'Administrator') as nama_asli
      FROM users u
      LEFT JOIN sekolah s ON u.sekolah_id = s.id
+     LEFT JOIN ptk p ON u.ref_id = p.id AND u.role IN ('guru', 'guru_bk')
+     LEFT JOIN peserta_didik pd ON u.ref_id = pd.id AND u.role = 'siswa'
      ${whereClause}
      ORDER BY u.${sortField} ${sortDirection}
      LIMIT ? OFFSET ?`,
@@ -100,10 +111,37 @@ async function deleteUser(id) {
   return result.affectedRows > 0;
 }
 
+async function getUserStats(sekolahId) {
+  const filters = [];
+  const values = [];
+
+  if (sekolahId) {
+    filters.push('sekolah_id = ?');
+    values.push(sekolahId);
+  }
+
+  const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+
+  const [totalRows] = await pool.query(`SELECT COUNT(*) as count FROM users ${whereClause}`, values);
+  const [roleRows] = await pool.query(
+    `SELECT role, COUNT(*) as count FROM users ${whereClause} GROUP BY role`, 
+    values
+  );
+
+  return {
+    total: totalRows[0].count,
+    byRole: roleRows.reduce((acc, row) => {
+      acc[row.role] = row.count;
+      return acc;
+    }, {})
+  };
+}
+
 module.exports = {
   listUsers,
   findUserById,
   createUser,
   updateUser,
   deleteUser,
+  getUserStats,
 };

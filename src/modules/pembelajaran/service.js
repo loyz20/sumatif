@@ -29,14 +29,36 @@ async function remove(id, query) {
   return { id, deleted: true };
 }
 
+async function list(query, reqUser) {
+  const sekolahId = query.sekolah_id;
+  const { limit = 50, page = 1 } = query;
+  const offset = (page - 1) * limit;
+  
+  // If user is a guru, filter by their PTK ID (ref_id)
+  const ptkId = reqUser.role === 'guru' ? reqUser.ref_id : null;
+  
+  return pembelajaranModel.listPembelajaran(sekolahId, limit, offset, ptkId);
+}
+
 async function listByRombel(rombelId, query) {
   const sekolahId = query.sekolah_id;
   return pembelajaranModel.listPembelajaranByRombel(rombelId, sekolahId);
+}
+
+async function listKomponen(pembelajaranId, semesterId) {
+  return await pembelajaranModel.listKomponen(pembelajaranId, semesterId);
+}
+
+async function saveKomponen(pembelajaranId, semesterId, sekolahId, komponenList, userId) {
+  return await pembelajaranModel.saveKomponen(pembelajaranId, semesterId, sekolahId, komponenList, userId);
 }
 
 module.exports = {
   create,
   update,
   remove,
+  list,
   listByRombel,
+  listKomponen,
+  saveKomponen,
 };

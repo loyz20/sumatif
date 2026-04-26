@@ -1,7 +1,10 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/db');
 
-async function listPtk({ search, page, limit, sortField, sortDirection, sekolahId }) {
+async function listPtk({ 
+	search, page, limit, sortField, sortDirection, sekolahId, 
+	jenis_kelamin, pendidikan_terakhir 
+}) {
 	const filters = [];
 	const values = [];
 
@@ -10,18 +13,25 @@ async function listPtk({ search, page, limit, sortField, sortDirection, sekolahI
 		values.push(sekolahId);
 	}
 
+	if (jenis_kelamin) {
+		filters.push('jenis_kelamin = ?');
+		values.push(jenis_kelamin);
+	}
+
+	if (pendidikan_terakhir) {
+		filters.push('pendidikan_terakhir = ?');
+		values.push(pendidikan_terakhir);
+	}
+
 	if (search) {
 		filters.push(`(
 			nama LIKE ? OR
-			nik LIKE ? OR
 			nip LIKE ? OR
-			nuptk LIKE ? OR
-			jenis_kelamin LIKE ? OR
-			pendidikan_terakhir LIKE ?
+			nuptk LIKE ?
 		)`);
 
 		const keyword = `%${search}%`;
-		values.push(keyword, keyword, keyword, keyword, keyword, keyword);
+		values.push(keyword, keyword, keyword);
 	}
 
 	const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
@@ -34,7 +44,7 @@ async function listPtk({ search, page, limit, sortField, sortDirection, sekolahI
 	const offset = (page - 1) * limit;
 
 	const [rows] = await pool.query(
-		`SELECT id, sekolah_id, nama, nik, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir
+		`SELECT id, sekolah_id, nama, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir
 		 FROM ptk
 		 ${whereClause}
 		 ORDER BY ${sortField} ${sortDirection}
@@ -55,7 +65,7 @@ async function listPtk({ search, page, limit, sortField, sortDirection, sekolahI
 
 async function findPtkById(id, sekolahId) {
 	const [rows] = await pool.query(
-		`SELECT id, sekolah_id, nama, nik, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir
+		`SELECT id, sekolah_id, nama, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir
 		 FROM ptk
 		 WHERE id = ? AND (sekolah_id = ? OR ? IS NULL)
 		 LIMIT 1`,
@@ -65,14 +75,9 @@ async function findPtkById(id, sekolahId) {
 	return rows[0] || null;
 }
 
-async function findPtkConflicts({ nik, nip, nuptk }, exceptId) {
+async function findPtkConflicts({ nip, nuptk }, exceptId) {
 	const conditions = [];
 	const values = [];
-
-	if (nik) {
-		conditions.push('nik = ?');
-		values.push(nik);
-	}
 
 	if (nip) {
 		conditions.push('nip = ?');
@@ -88,7 +93,7 @@ async function findPtkConflicts({ nik, nip, nuptk }, exceptId) {
 		return [];
 	}
 
-	let query = `SELECT id, nik, nip, nuptk FROM ptk WHERE (${conditions.join(' OR ')})`;
+	let query = `SELECT id, nip, nuptk FROM ptk WHERE (${conditions.join(' OR ')})`;
 	if (exceptId) {
 		query += ' AND id <> ?';
 		values.push(exceptId);
@@ -103,13 +108,12 @@ async function createPtk(data) {
 
 	await pool.query(
 		`INSERT INTO ptk (
-			id, sekolah_id, nama, nik, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			id, sekolah_id, nama, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		[
 			id,
 			data.sekolah_id,
 			data.nama,
-			data.nik || null,
 			data.nip,
 			data.nuptk || null,
 			data.jenis_kelamin || null,
@@ -122,7 +126,7 @@ async function createPtk(data) {
 }
 
 const PTK_UPDATABLE_FIELDS = new Set([
-	'sekolah_id', 'nama', 'nik', 'nip', 'nuptk',
+	'sekolah_id', 'nama', 'nip', 'nuptk',
 	'jenis_kelamin', 'tanggal_lahir', 'pendidikan_terakhir',
 ]);
 
@@ -134,7 +138,7 @@ async function updatePtk(id, data, sekolahId) {
 		if (PTK_UPDATABLE_FIELDS.has(key)) {
 			fields.push(`${key} = ?`);
 			// Convert empty string to null for optional fields
-			if (['nik', 'nuptk', 'jenis_kelamin', 'tanggal_lahir', 'pendidikan_terakhir'].includes(key) && value === '') {
+			if (['nuptk', 'jenis_kelamin', 'tanggal_lahir', 'pendidikan_terakhir'].includes(key) && value === '') {
 				values.push(null);
 			} else {
 				values.push(value);
@@ -161,6 +165,29 @@ async function deletePtk(id, sekolahId) {
 	return result.affectedRows > 0;
 }
 
+async function getPtkStats(sekolahId) {
+	const [totalRows] = await pool.query(
+		'SELECT COUNT(*) as total FROM ptk WHERE sekolah_id = ?',
+		[sekolahId]
+	);
+
+	const [genderRows] = await pool.query(
+		'SELECT jenis_kelamin, COUNT(*) as count FROM ptk WHERE sekolah_id = ? GROUP BY jenis_kelamin',
+		[sekolahId]
+	);
+
+	const [pendidikanRows] = await pool.query(
+		'SELECT pendidikan_terakhir, COUNT(*) as count FROM ptk WHERE sekolah_id = ? GROUP BY pendidikan_terakhir',
+		[sekolahId]
+	);
+
+	return {
+		total: totalRows[0].total,
+		gender: genderRows,
+		pendidikan: pendidikanRows
+	};
+}
+
 module.exports = {
 	listPtk,
 	findPtkById,
@@ -168,4 +195,5 @@ module.exports = {
 	createPtk,
 	updatePtk,
 	deletePtk,
+	getPtkStats,
 };

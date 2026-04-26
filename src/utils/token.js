@@ -26,6 +26,7 @@ function signAccessToken(user) {
       sub: user.id,
       role: user.role,
       sekolah_id: user.sekolah_id,
+      ref_id: user.ref_id,
     },
     accessSecret,
     { expiresIn: accessExpiresIn }

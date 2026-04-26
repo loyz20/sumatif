@@ -2,6 +2,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs');
@@ -16,7 +17,12 @@ const errorHandler = require('./middlewares/errorHandler');
 const app = express();
 
 // Security headers
-app.use(helmet());
+app.use(helmet({
+	crossOriginResourcePolicy: false, // Allow cross-origin images
+}));
+
+// Serve static files from uploads folder
+app.use('/api/v1/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // CORS
 const corsOrigin = process.env.CORS_ORIGIN;
@@ -31,6 +37,9 @@ app.use(compression());
 // Body parsers
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
+
+// Cookie parser (for reading httpOnly cookies)
+app.use(cookieParser());
 
 // Logging
 app.use(morgan('combined'));

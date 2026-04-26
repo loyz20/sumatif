@@ -46,10 +46,20 @@ async function remove(req, res, next) {
   }
 }
 
+async function stats(req, res, next) {
+  try {
+    const result = await userManagementService.stats(req.user);
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   list,
   detail,
   create,
   update,
   remove,
+  stats,
 };

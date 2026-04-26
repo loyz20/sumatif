@@ -24,8 +24,8 @@ List PTK dengan pagination, search, sorting, dan filter sekolah.
 |-------------|--------|------------|-----------------------------------------------|
 | `page`      | string | `1`        | Halaman                                       |
 | `limit`     | string | `10`       | Maks 100                                      |
-| `search`    | string | —          | Cari di: nama, nik, nip, nuptk, jenis_kelamin, pendidikan_terakhir |
-| `sort`      | string | `nama:asc` | Field: nama, nik, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir, created_at |
+| `search`    | string | —          | Cari di: nama, nip, nuptk, jenis_kelamin, pendidikan_terakhir |
+| `sort`      | string | `nama:asc` | Field: nama, nip, nuptk, jenis_kelamin, tanggal_lahir, pendidikan_terakhir, created_at |
 | `sekolah_id`| string | —          | Filter by sekolah UUID                        |
 
 **Response (200):**
@@ -40,7 +40,6 @@ List PTK dengan pagination, search, sorting, dan filter sekolah.
         "id": "uuid-v4",
         "sekolah_id": "uuid-v4",
         "nama": "Budi Santoso",
-        "nik": "3201123456789012",
         "nip": "1987654321",
         "nuptk": "123456",
         "jenis_kelamin": "L",
@@ -69,18 +68,16 @@ Buat PTK baru.
 | Field                  | Type   | Required | Validasi                          |
 |------------------------|--------|----------|-----------------------------------|
 | `nama`                 | string | ✅       | min 1 karakter                    |
-| `nik`                  | string | ✅       | tepat 16 digit                    |
 | `nip`                  | string | ✅       | min 1 karakter (unik)             |
-| `nuptk`                | string | ✅       | min 1 karakter (unik)             |
-| `jenis_kelamin`        | string | ✅       | `L` atau `P`                      |
-| `tanggal_lahir`        | string | ✅       | format `YYYY-MM-DD`               |
-| `pendidikan_terakhir`  | string | ✅       | min 1 karakter                    |
+| `nuptk`                | string | ❌       | min 1 karakter (unik)             |
+| `jenis_kelamin`        | string | ❌       | `L` atau `P`                      |
+| `tanggal_lahir`        | string | ❌       | format `YYYY-MM-DD`               |
+| `pendidikan_terakhir`  | string | ❌       | min 1 karakter                    |
 | `sekolah_id`           | string | ✅       | UUID v4                           |
 
 ```json
 {
   "nama": "Budi Santoso",
-  "nik": "3201123456789012",
   "nip": "1987654321",
   "nuptk": "123456",
   "jenis_kelamin": "L",

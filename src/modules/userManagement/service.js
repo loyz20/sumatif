@@ -126,11 +126,17 @@ async function remove(id, actor) {
   return true;
 }
 
+async function stats(actor) {
+  const sekolahId = actor.role === 'admin' ? actor.sekolah_id : null;
+  return userManagementModel.getUserStats(sekolahId);
+}
+
 module.exports = {
   list,
   detail,
   create,
   update,
   remove,
+  stats,
 };
 

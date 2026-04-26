@@ -38,6 +38,13 @@ async function create(req, res, next) {
 
 async function update(req, res, next) {
   try {
+    // Security check: admin can only update their own school
+    if (req.user.role === 'admin' && req.user.sekolah_id !== req.params.id) {
+        const error = new Error('Anda tidak memiliki akses untuk memperbarui sekolah lain');
+        error.status = 403;
+        throw error;
+    }
+
     const result = await sekolahService.update(req.params.id, req.body);
     await logActivity({
       userId: req.user.id,
@@ -47,6 +54,38 @@ async function update(req, res, next) {
       description: `Memperbarui profil sekolah: ${result.nama}`
     });
     return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function uploadLogo(req, res, next) {
+  try {
+    if (!req.file) {
+      const error = new Error('File logo harus diunggah');
+      error.status = 400;
+      throw error;
+    }
+
+    // Security check: admin can only update their own school
+    if (req.user.role === 'admin' && req.user.sekolah_id !== req.params.id) {
+      const error = new Error('Anda tidak memiliki akses untuk memperbarui sekolah lain');
+      error.status = 403;
+      throw error;
+    }
+
+    const logoUrl = `/uploads/logos/${req.file.filename}`;
+    const result = await sekolahService.updateLogo(req.params.id, logoUrl);
+    
+    await logActivity({
+      userId: req.user.id,
+      action: 'UPDATE_LOGO_SEKOLAH',
+      entityType: 'sekolah',
+      entityId: req.params.id,
+      description: `Memperbarui logo sekolah ID: ${req.params.id}`
+    });
+
+    return successResponse(res, { logo_url: logoUrl }, 'Logo berhasil diperbarui');
   } catch (error) {
     return next(error);
   }
@@ -68,10 +107,21 @@ async function remove(req, res, next) {
   }
 }
 
+async function stats(req, res, next) {
+  try {
+    const result = await sekolahService.getStats();
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   list,
   detail,
   create,
   update,
+  uploadLogo,
   remove,
+  stats,
 };

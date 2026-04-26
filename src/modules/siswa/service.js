@@ -3,9 +3,17 @@ const siswaModel = require('./model');
 const { createError, parsePagination } = require('../shared/service');
 
 async function list(query) {
-  const pagination = parsePagination(query, 'nama', new Set(['nama', 'nis', 'nisn', 'nik', 'tanggal_lahir']));
+  const pagination = parsePagination(query, 'nama', new Set(['nama', 'nis', 'nisn', 'nik', 'tanggal_lahir', 'kelas', 'jenis_kelamin']));
   const sekolahId = query.sekolah_id ? String(query.sekolah_id).trim() : '';
-  return siswaModel.listSiswa({ ...pagination, sekolahId });
+  const jenisKelamin = query.jenis_kelamin;
+  const rombelId = query.rombel_id;
+
+  return siswaModel.listSiswa({ 
+    ...pagination, 
+    sekolahId, 
+    jenisKelamin, 
+    rombelId 
+  });
 }
 
 async function detail(id, query) {
@@ -66,11 +74,45 @@ async function remove(id, query) {
   return true;
 }
 
+async function importData(dataList, sekolahId) {
+  let successCount = 0;
+  let failedCount = 0;
+  const errors = [];
+
+  for (const item of dataList) {
+    try {
+      item.sekolah_id = sekolahId;
+      // Check if NIS already exists in this school
+      const existing = await siswaModel.findSiswaByNis(item.nis, sekolahId);
+      
+      if (existing) {
+        await update(existing.id, item);
+      } else {
+        await create(item);
+      }
+      
+      successCount++;
+    } catch (error) {
+      failedCount++;
+      errors.push({ item, error: error.message || 'Gagal mengimpor' });
+    }
+  }
+
+  return { successCount, failedCount, errors };
+}
+
+async function stats(query) {
+  const sekolahId = query.sekolah_id;
+  return await siswaModel.getSiswaStats(sekolahId);
+}
+
 module.exports = {
   list,
   detail,
   create,
   update,
   remove,
+  importData,
+  stats,
 };
 
